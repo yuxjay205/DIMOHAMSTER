@@ -29,6 +29,14 @@ object NativeRenderer {
     external fun nativeSetCameraRotation(pitch: Float, yaw: Float)
     external fun nativeLookAt(x: Float, y: Float, z: Float)
 
+    // Device camera frame processing
+    external fun nativeUpdateCameraFrame(width: Int, height: Int, data: ByteArray, timestamp: Long)
+    external fun nativeSetCameraFrameEnabled(enabled: Boolean)
+    external fun nativeIsCameraFrameEnabled(): Boolean
+
+    // Sensor data (for simulation support)
+    external fun nativeUpdateSensorData(sensorType: Int, x: Float, y: Float, z: Float)
+
     // Convenience methods
     fun setClearColor(r: Float, g: Float, b: Float, a: Float = 1f) {
         nativeSetClearColor(r, g, b, a)
@@ -44,5 +52,38 @@ object NativeRenderer {
 
     fun lookAt(x: Float, y: Float, z: Float) {
         nativeLookAt(x, y, z)
+    }
+
+    /**
+     * Update device camera frame data for AR/video processing
+     * @param width Frame width in pixels
+     * @param height Frame height in pixels
+     * @param data NV21 format frame data
+     * @param timestamp Frame timestamp in nanoseconds
+     */
+    fun updateCameraFrame(width: Int, height: Int, data: ByteArray, timestamp: Long) {
+        nativeUpdateCameraFrame(width, height, data, timestamp)
+    }
+
+    /**
+     * Enable or disable camera frame processing
+     */
+    fun setCameraFrameEnabled(enabled: Boolean) {
+        nativeSetCameraFrameEnabled(enabled)
+    }
+
+    /**
+     * Check if camera frame processing is enabled
+     */
+    fun isCameraFrameEnabled(): Boolean {
+        return nativeIsCameraFrameEnabled()
+    }
+
+    /**
+     * Update sensor data from simulation
+     * @param sensorType 0 = accelerometer, 1 = gyroscope
+     */
+    fun updateSensorData(sensorType: Int, x: Float, y: Float, z: Float) {
+        nativeUpdateSensorData(sensorType, x, y, z)
     }
 }

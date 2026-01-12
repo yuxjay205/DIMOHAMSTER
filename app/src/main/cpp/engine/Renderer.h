@@ -4,6 +4,8 @@
 #include <EGL/egl.h>
 #include <android/asset_manager.h>
 #include <memory>
+#include <vector>
+#include <cstdint>
 
 #include "Camera.h"
 #include "ShaderLoader.h"
@@ -52,6 +54,14 @@ public:
     void updateSensorData(float accelX, float accelY, float accelZ,
                           float gyroX, float gyroY, float gyroZ);
 
+    // Camera frame input (for AR/video processing)
+    void updateCameraFrame(int width, int height, const uint8_t* data, size_t dataSize, int64_t timestamp);
+
+    // Camera frame state
+    bool hasCameraFrame() const { return m_hasCameraFrame; }
+    int getCameraFrameWidth() const { return m_cameraFrameWidth; }
+    int getCameraFrameHeight() const { return m_cameraFrameHeight; }
+
 private:
     void setupDefaultShaders();
     void renderTestTriangle();
@@ -80,6 +90,14 @@ private:
     // Sensor data
     float m_accelData[3];
     float m_gyroData[3];
+
+    // Camera frame data
+    bool m_hasCameraFrame;
+    int m_cameraFrameWidth;
+    int m_cameraFrameHeight;
+    std::vector<uint8_t> m_cameraFrameData;
+    int64_t m_cameraFrameTimestamp;
+    GLuint m_cameraTexture;
 };
 
 } // namespace Engine

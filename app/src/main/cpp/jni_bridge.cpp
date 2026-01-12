@@ -2,9 +2,14 @@
 #include <android/log.h>
 #include <android/asset_manager.h>
 #include <android/asset_manager_jni.h>
+#include <vector>
+#include <mutex>
 
 #include "engine/Renderer.h"
+
+#if FMOD_ENABLED
 #include "audio/AudioSystem.h"
+#endif
 
 #define LOG_TAG "JNI_Bridge"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
@@ -12,8 +17,11 @@
 
 // Global instances
 static Engine::Renderer* g_renderer = nullptr;
-static Audio::AudioSystem* g_audioSystem = nullptr;
 static AAssetManager* g_assetManager = nullptr;
+
+#if FMOD_ENABLED
+static Audio::AudioSystem* g_audioSystem = nullptr;
+#endif
 
 // Frame timing
 static auto g_lastFrameTime = std::chrono::high_resolution_clock::now();
@@ -50,7 +58,8 @@ Java_com_example_dimohamster_core_NativeRenderer_nativeInit(
         }
     }
 
-    // Create and initialize audio system
+    // Create and initialize audio system (if FMOD is available)
+#if FMOD_ENABLED
     if (!g_audioSystem) {
         g_audioSystem = new Audio::AudioSystem();
         if (!g_audioSystem->init(g_assetManager)) {
@@ -58,6 +67,9 @@ Java_com_example_dimohamster_core_NativeRenderer_nativeInit(
             // Audio failure is non-fatal, continue without audio
         }
     }
+#else
+    LOGI("Audio system disabled (FMOD not available)");
+#endif
 
     LOGI("Native engine initialized successfully");
 }
@@ -69,11 +81,13 @@ Java_com_example_dimohamster_core_NativeRenderer_nativeShutdown(
 
     LOGI("Shutting down native engine...");
 
+#if FMOD_ENABLED
     if (g_audioSystem) {
         g_audioSystem->shutdown();
         delete g_audioSystem;
         g_audioSystem = nullptr;
     }
+#endif
 
     if (g_renderer) {
         g_renderer->shutdown();
@@ -123,6 +137,7 @@ Java_com_example_dimohamster_core_NativeRenderer_nativeOnDrawFrame(
         g_renderer->onDrawFrame(deltaTime);
     }
 
+#if FMOD_ENABLED
     // Update audio system
     if (g_audioSystem) {
         g_audioSystem->update();
@@ -135,6 +150,7 @@ Java_com_example_dimohamster_core_NativeRenderer_nativeOnDrawFrame(
             g_audioSystem->setListenerAttributes(attrs);
         }
     }
+#endif
 }
 
 JNIEXPORT void JNICALL
@@ -213,9 +229,109 @@ Java_com_example_dimohamster_sensors_SensorBridge_nativeUpdateSensorData(
     }
 }
 
+// Sensor data update from NativeRenderer (for simulation support)
+JNIEXPORT void JNICALL
+Java_com_example_dimohamster_core_NativeRenderer_nativeUpdateSensorData(
+        JNIEnv* /* env */,
+        jobject /* this */,
+        jint sensorType,
+        jfloat x,
+        jfloat y,
+        jfloat z) {
+
+    if (g_renderer) {
+        if (sensorType == 0) {
+            // Accelerometer - update with zero gyro
+            g_renderer->updateSensorData(x, y, z, 0, 0, 0);
+        } else if (sensorType == 1) {
+            // Gyroscope - update with zero accel (preserving gravity)
+            g_renderer->updateSensorData(0, 0, 9.81f, x, y, z);
+        }
+    }
+}
+
 // =============================================================================
-// Audio JNI Functions
+// Camera Frame JNI Functions
 // =============================================================================
+
+// Camera frame state
+static bool g_cameraFrameEnabled = false;
+static int g_cameraFrameWidth = 0;
+static int g_cameraFrameHeight = 0;
+static std::vector<uint8_t> g_cameraFrameData;
+static int64_t g_cameraFrameTimestamp = 0;
+static std::mutex g_cameraFrameMutex;
+
+JNIEXPORT void JNICALL
+Java_com_example_dimohamster_core_NativeRenderer_nativeUpdateCameraFrame(
+        JNIEnv* env,
+        jobject /* this */,
+        jint width,
+        jint height,
+        jbyteArray data,
+        jlong timestamp) {
+
+    if (!g_cameraFrameEnabled) {
+        return;
+    }
+
+    jsize dataLength = env->GetArrayLength(data);
+    if (dataLength <= 0) {
+        return;
+    }
+
+    std::lock_guard<std::mutex> lock(g_cameraFrameMutex);
+
+    // Resize buffer if needed
+    if (g_cameraFrameData.size() != static_cast<size_t>(dataLength)) {
+        g_cameraFrameData.resize(dataLength);
+    }
+
+    // Copy frame data
+    env->GetByteArrayRegion(data, 0, dataLength,
+                            reinterpret_cast<jbyte*>(g_cameraFrameData.data()));
+
+    g_cameraFrameWidth = width;
+    g_cameraFrameHeight = height;
+    g_cameraFrameTimestamp = timestamp;
+
+    // Pass to renderer for processing/display
+    if (g_renderer) {
+        g_renderer->updateCameraFrame(width, height, g_cameraFrameData.data(), dataLength, timestamp);
+    }
+}
+
+JNIEXPORT void JNICALL
+Java_com_example_dimohamster_core_NativeRenderer_nativeSetCameraFrameEnabled(
+        JNIEnv* /* env */,
+        jobject /* this */,
+        jboolean enabled) {
+
+    g_cameraFrameEnabled = (enabled == JNI_TRUE);
+    LOGI("Camera frame processing %s", g_cameraFrameEnabled ? "enabled" : "disabled");
+
+    if (!g_cameraFrameEnabled) {
+        // Clear buffer when disabled
+        std::lock_guard<std::mutex> lock(g_cameraFrameMutex);
+        g_cameraFrameData.clear();
+        g_cameraFrameWidth = 0;
+        g_cameraFrameHeight = 0;
+    }
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_example_dimohamster_core_NativeRenderer_nativeIsCameraFrameEnabled(
+        JNIEnv* /* env */,
+        jobject /* this */) {
+
+    return g_cameraFrameEnabled ? JNI_TRUE : JNI_FALSE;
+}
+
+// =============================================================================
+// Audio JNI Functions (only if FMOD is available)
+// =============================================================================
+
+#if FMOD_ENABLED
 
 JNIEXPORT jboolean JNICALL
 Java_com_example_dimohamster_core_NativeAudio_nativeLoadBank(
@@ -323,5 +439,7 @@ Java_com_example_dimohamster_core_NativeAudio_nativePauseAll(
         g_audioSystem->pauseAll(paused == JNI_TRUE);
     }
 }
+
+#endif // FMOD_ENABLED
 
 } // extern "C"

@@ -2,6 +2,7 @@
 #include <android/log.h>
 #include <glm/gtc/type_ptr.hpp>
 #include <chrono>
+#include <cstring>
 
 #define LOG_TAG "Renderer"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
@@ -16,7 +17,12 @@ Renderer::Renderer()
     , m_assetManager(nullptr)
     , m_testVAO(0)
     , m_testVBO(0)
-    , m_testShader(0) {
+    , m_testShader(0)
+    , m_hasCameraFrame(false)
+    , m_cameraFrameWidth(0)
+    , m_cameraFrameHeight(0)
+    , m_cameraFrameTimestamp(0)
+    , m_cameraTexture(0) {
     m_clearColor[0] = 0.1f;
     m_clearColor[1] = 0.1f;
     m_clearColor[2] = 0.15f;
@@ -49,6 +55,13 @@ void Renderer::shutdown() {
         glDeleteBuffers(1, &m_testVBO);
         m_testVBO = 0;
     }
+    if (m_cameraTexture) {
+        glDeleteTextures(1, &m_cameraTexture);
+        m_cameraTexture = 0;
+    }
+
+    m_cameraFrameData.clear();
+    m_hasCameraFrame = false;
 
     m_shaderLoader.cleanup();
     m_initialized = false;
@@ -192,6 +205,43 @@ void Renderer::renderTestTriangle() {
 
     m_stats.drawCalls++;
     m_stats.triangles++;
+}
+
+void Renderer::updateCameraFrame(int width, int height, const uint8_t* data, size_t dataSize, int64_t timestamp) {
+    if (data == nullptr || dataSize == 0) {
+        return;
+    }
+
+    // Store frame dimensions
+    m_cameraFrameWidth = width;
+    m_cameraFrameHeight = height;
+    m_cameraFrameTimestamp = timestamp;
+
+    // Copy frame data
+    if (m_cameraFrameData.size() != dataSize) {
+        m_cameraFrameData.resize(dataSize);
+    }
+    std::memcpy(m_cameraFrameData.data(), data, dataSize);
+
+    m_hasCameraFrame = true;
+
+    // Create texture if not exists
+    if (m_cameraTexture == 0) {
+        glGenTextures(1, &m_cameraTexture);
+        glBindTexture(GL_TEXTURE_2D, m_cameraTexture);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        LOGI("Camera texture created");
+    }
+
+    // Convert NV21 to grayscale (Y plane only) for simple display
+    // For full color, you'd need a YUV shader or convert to RGB
+    glBindTexture(GL_TEXTURE_2D, m_cameraTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, width, height, 0,
+                 GL_LUMINANCE, GL_UNSIGNED_BYTE, data);
+    glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 } // namespace Engine

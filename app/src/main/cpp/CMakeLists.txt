@@ -18,7 +18,7 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(glm)
 
 # =============================================================================
-# FMOD Library Configuration
+# FMOD Library Configuration (Optional)
 # =============================================================================
 # FMOD libraries should be placed in:
 #   app/src/main/cpp/fmod/lib/${ANDROID_ABI}/
@@ -27,17 +27,26 @@ set(FMOD_DIR ${CMAKE_SOURCE_DIR}/fmod)
 set(FMOD_INC_DIR ${FMOD_DIR}/inc)
 set(FMOD_LIB_DIR ${FMOD_DIR}/lib/${ANDROID_ABI})
 
-# FMOD Core Library
-add_library(fmod SHARED IMPORTED)
-set_target_properties(fmod PROPERTIES
-    IMPORTED_LOCATION ${FMOD_LIB_DIR}/libfmod.so
-)
+# Check if FMOD libraries exist
+set(FMOD_ENABLED OFF)
+if(EXISTS "${FMOD_LIB_DIR}/libfmod.so" AND EXISTS "${FMOD_LIB_DIR}/libfmodstudio.so")
+    set(FMOD_ENABLED ON)
+    message(STATUS "FMOD libraries found, audio enabled")
 
-# FMOD Studio Library
-add_library(fmodstudio SHARED IMPORTED)
-set_target_properties(fmodstudio PROPERTIES
-    IMPORTED_LOCATION ${FMOD_LIB_DIR}/libfmodstudio.so
-)
+    # FMOD Core Library
+    add_library(fmod SHARED IMPORTED)
+    set_target_properties(fmod PROPERTIES
+        IMPORTED_LOCATION ${FMOD_LIB_DIR}/libfmod.so
+    )
+
+    # FMOD Studio Library
+    add_library(fmodstudio SHARED IMPORTED)
+    set_target_properties(fmodstudio PROPERTIES
+        IMPORTED_LOCATION ${FMOD_LIB_DIR}/libfmodstudio.so
+    )
+else()
+    message(STATUS "FMOD libraries not found, building without audio support")
+endif()
 
 # =============================================================================
 # Engine Source Files
@@ -55,15 +64,20 @@ set(ENGINE_HEADERS
 )
 
 # =============================================================================
-# Audio Source Files
+# Audio Source Files (only if FMOD is available)
 # =============================================================================
-set(AUDIO_SOURCES
-    audio/AudioSystem.cpp
-)
+if(FMOD_ENABLED)
+    set(AUDIO_SOURCES
+        audio/AudioSystem.cpp
+    )
 
-set(AUDIO_HEADERS
-    audio/AudioSystem.h
-)
+    set(AUDIO_HEADERS
+        audio/AudioSystem.h
+    )
+else()
+    set(AUDIO_SOURCES "")
+    set(AUDIO_HEADERS "")
+endif()
 
 # =============================================================================
 # Main Native Library
@@ -81,8 +95,15 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}
     ${CMAKE_SOURCE_DIR}/engine
     ${CMAKE_SOURCE_DIR}/audio
-    ${FMOD_INC_DIR}
 )
+
+# Add FMOD includes if available
+if(FMOD_ENABLED)
+    target_include_directories(${PROJECT_NAME} PRIVATE ${FMOD_INC_DIR})
+    target_compile_definitions(${PROJECT_NAME} PRIVATE FMOD_ENABLED=1)
+else()
+    target_compile_definitions(${PROJECT_NAME} PRIVATE FMOD_ENABLED=0)
+endif()
 
 # Find required Android libraries
 find_library(log-lib log)
@@ -100,11 +121,15 @@ target_link_libraries(${PROJECT_NAME}
 
     # GLM (header-only, linked for include paths)
     glm::glm
-
-    # FMOD libraries
-    fmod
-    fmodstudio
 )
+
+# Link FMOD libraries if available
+if(FMOD_ENABLED)
+    target_link_libraries(${PROJECT_NAME}
+        fmod
+        fmodstudio
+    )
+endif()
 
 # Compiler flags for optimization
 target_compile_options(${PROJECT_NAME} PRIVATE
@@ -124,9 +149,11 @@ endif()
 # =============================================================================
 # Installation Rules (for AAB packaging)
 # =============================================================================
-# Ensure FMOD libraries are packaged with the APK
-install(FILES
-    ${FMOD_LIB_DIR}/libfmod.so
-    ${FMOD_LIB_DIR}/libfmodstudio.so
-    DESTINATION lib/${ANDROID_ABI}
-)
+# Ensure FMOD libraries are packaged with the APK (if available)
+if(FMOD_ENABLED)
+    install(FILES
+        ${FMOD_LIB_DIR}/libfmod.so
+        ${FMOD_LIB_DIR}/libfmodstudio.so
+        DESTINATION lib/${ANDROID_ABI}
+    )
+endif()
