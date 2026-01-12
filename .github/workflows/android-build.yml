@@ -1,0 +1,148 @@
+name: Android Build & Release
+
+on:
+  push:
+    branches: [ main, develop ]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4096m -Dorg.gradle.daemon=false"
+
+jobs:
+  build:
+    name: Build Native & Android
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install NDK r27
+        run: |
+          yes | sdkmanager --install "ndk;27.0.12077973" --sdk_root=${ANDROID_SDK_ROOT}
+          echo "ANDROID_NDK_HOME=${ANDROID_SDK_ROOT}/ndk/27.0.12077973" >> $GITHUB_ENV
+
+      - name: Install CMake 3.22.1
+        run: |
+          yes | sdkmanager --install "cmake;3.22.1" --sdk_root=${ANDROID_SDK_ROOT}
+
+      - name: Download FMOD SDK
+        run: |
+          # Create FMOD directory structure
+          mkdir -p app/src/main/cpp/fmod/lib/arm64-v8a
+          mkdir -p app/src/main/cpp/fmod/lib/x86_64
+          mkdir -p app/src/main/cpp/fmod/inc
+
+          # Note: In production, download from FMOD's official site with your license
+          # For CI, you would typically:
+          # 1. Store FMOD SDK in a private artifact repository
+          # 2. Or include placeholder stubs for build testing
+          echo "FMOD SDK placeholder - replace with actual SDK in production"
+
+          # Create placeholder headers for build testing
+          touch app/src/main/cpp/fmod/inc/fmod.hpp
+          touch app/src/main/cpp/fmod/inc/fmod_studio.hpp
+          touch app/src/main/cpp/fmod/inc/fmod_errors.h
+
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Set version from run number
+        run: |
+          VERSION_CODE=${{ github.run_number }}
+          VERSION_NAME="1.0.${{ github.run_number }}"
+          echo "VERSION_CODE=${VERSION_CODE}" >> $GITHUB_ENV
+          echo "VERSION_NAME=${VERSION_NAME}" >> $GITHUB_ENV
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug --stacktrace
+
+      - name: Build Release AAB
+        if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main'
+        env:
+          KEYSTORE_FILE: ${{ github.workspace }}/release.keystore
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          # Decode keystore from secret
+          if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
+            echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > release.keystore
+          fi
+
+          # Build release AAB
+          ./gradlew bundleRelease --stacktrace
+
+      - name: Run Unit Tests
+        run: ./gradlew test --stacktrace
+
+      - name: Upload Debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-apk
+          path: app/build/outputs/apk/debug/*.apk
+          retention-days: 14
+
+      - name: Upload Release AAB
+        if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-aab
+          path: app/build/outputs/bundle/release/*.aab
+          retention-days: 30
+
+      - name: Upload Native Symbols
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-symbols
+          path: |
+            app/build/intermediates/cmake/debug/obj/
+            app/build/intermediates/cmake/release/obj/
+          retention-days: 30
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    steps:
+      - name: Download Release AAB
+        uses: actions/download-artifact@v4
+        with:
+          name: release-aab
+          path: ./release
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ./release/*.aab
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
