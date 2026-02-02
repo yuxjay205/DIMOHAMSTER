@@ -3,7 +3,20 @@
     "allow": [
       "Bash(.\\\\gradlew.bat assembleDebug:*)",
       "Bash(./gradlew.bat assembleDebug)",
-      "Bash(JAVA_HOME=\"C:/Program Files/Android/Android Studio/jbr\" ./gradlew.bat:*)"
+      "Bash(JAVA_HOME=\"C:/Program Files/Android/Android Studio/jbr\" ./gradlew.bat:*)",
+      "Skill(find-skills)",
+      "Bash(npx skills add davila7/claude-code-templates@cli-tool-components-skills-creative-design-game-development-mobile-games-skill-md -g -y)",
+      "Bash(npx skills:*)",
+      "WebFetch(domain:skillsmp.com)",
+      "Bash(git ls-remote:*)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(.gradlew.bat assembleDebug)",
+      "Bash(cmd /c \"gradlew.bat assembleDebug\")",
+      "Bash(./gradlew assembleDebug:*)",
+      "Bash(adb logcat:*)",
+      "Bash(adb install:*)",
+      "Bash(adb shell:*)"
     ]
   }
 }

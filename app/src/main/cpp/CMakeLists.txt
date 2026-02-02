@@ -64,6 +64,17 @@ set(ENGINE_HEADERS
 )
 
 # =============================================================================
+# Game Source Files
+# =============================================================================
+set(GAME_SOURCES
+    game/PaperTossGame.cpp
+)
+
+set(GAME_HEADERS
+    game/PaperTossGame.h
+)
+
+# =============================================================================
 # Audio Source Files (only if FMOD is available)
 # =============================================================================
 if(FMOD_ENABLED)
@@ -86,6 +97,8 @@ add_library(${PROJECT_NAME} SHARED
     jni_bridge.cpp
     ${ENGINE_SOURCES}
     ${ENGINE_HEADERS}
+    ${GAME_SOURCES}
+    ${GAME_HEADERS}
     ${AUDIO_SOURCES}
     ${AUDIO_HEADERS}
 )
@@ -94,6 +107,7 @@ add_library(${PROJECT_NAME} SHARED
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}
     ${CMAKE_SOURCE_DIR}/engine
+    ${CMAKE_SOURCE_DIR}/game
     ${CMAKE_SOURCE_DIR}/audio
 )
 

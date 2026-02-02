@@ -10,6 +10,8 @@
 #include "Camera.h"
 #include "ShaderLoader.h"
 
+namespace Game { class PaperTossGame; }
+
 namespace Engine {
 
 struct RenderStats {
@@ -62,6 +64,11 @@ public:
     int getCameraFrameWidth() const { return m_cameraFrameWidth; }
     int getCameraFrameHeight() const { return m_cameraFrameHeight; }
 
+    // Touch input for game
+    void onTouchDown(float x, float y);
+    void onTouchMove(float x, float y);
+    void onTouchUp(float x, float y);
+
 private:
     void setupDefaultShaders();
     void renderTestTriangle();
@@ -98,6 +105,9 @@ private:
     std::vector<uint8_t> m_cameraFrameData;
     int64_t m_cameraFrameTimestamp;
     GLuint m_cameraTexture;
+
+    // Game
+    std::unique_ptr<Game::PaperTossGame> m_game;
 };
 
 } // namespace Engine

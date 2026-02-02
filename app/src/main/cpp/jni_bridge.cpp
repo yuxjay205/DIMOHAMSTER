@@ -168,6 +168,46 @@ Java_com_example_dimohamster_core_NativeRenderer_nativeSetClearColor(
 }
 
 // =============================================================================
+// Touch Input JNI Functions
+// =============================================================================
+
+JNIEXPORT void JNICALL
+Java_com_example_dimohamster_core_NativeRenderer_nativeTouchDown(
+        JNIEnv* /* env */,
+        jobject /* this */,
+        jfloat x,
+        jfloat y) {
+
+    if (g_renderer) {
+        g_renderer->onTouchDown(x, y);
+    }
+}
+
+JNIEXPORT void JNICALL
+Java_com_example_dimohamster_core_NativeRenderer_nativeTouchMove(
+        JNIEnv* /* env */,
+        jobject /* this */,
+        jfloat x,
+        jfloat y) {
+
+    if (g_renderer) {
+        g_renderer->onTouchMove(x, y);
+    }
+}
+
+JNIEXPORT void JNICALL
+Java_com_example_dimohamster_core_NativeRenderer_nativeTouchUp(
+        JNIEnv* /* env */,
+        jobject /* this */,
+        jfloat x,
+        jfloat y) {
+
+    if (g_renderer) {
+        g_renderer->onTouchUp(x, y);
+    }
+}
+
+// =============================================================================
 // Camera JNI Functions
 // =============================================================================
 

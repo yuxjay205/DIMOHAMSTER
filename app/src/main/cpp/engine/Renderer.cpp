@@ -1,4 +1,5 @@
 #include "Renderer.h"
+#include "PaperTossGame.h"
 #include <android/log.h>
 #include <glm/gtc/type_ptr.hpp>
 #include <chrono>
@@ -60,6 +61,11 @@ void Renderer::shutdown() {
         m_cameraTexture = 0;
     }
 
+    if (m_game) {
+        m_game->shutdown();
+        m_game.reset();
+    }
+
     m_cameraFrameData.clear();
     m_hasCameraFrame = false;
 
@@ -95,6 +101,10 @@ void Renderer::onSurfaceCreated() {
     // Setup default shaders and test geometry
     setupDefaultShaders();
 
+    // Initialize game
+    m_game = std::make_unique<Game::PaperTossGame>();
+    m_game->init(m_shaderLoader);
+
     m_initialized = true;
     LOGI("Surface created, OpenGL initialized");
 }
@@ -107,6 +117,11 @@ void Renderer::onSurfaceChanged(int width, int height) {
 
     // Update camera aspect ratio
     m_camera.resize(static_cast<float>(width), static_cast<float>(height));
+
+    // Resize game
+    if (m_game) {
+        m_game->resize(width, height);
+    }
 
     LOGI("Surface changed: %dx%d", width, height);
 }
@@ -122,8 +137,15 @@ void Renderer::onDrawFrame(float deltaTime) {
     glClearColor(m_clearColor[0], m_clearColor[1], m_clearColor[2], m_clearColor[3]);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    // Render test triangle
-    renderTestTriangle();
+    // Clamp delta time to avoid physics explosions on first frame or after pause
+    float clampedDt = deltaTime;
+    if (clampedDt > 0.1f) clampedDt = 0.016f;
+
+    // Update and render game
+    if (m_game) {
+        m_game->update(clampedDt);
+        m_game->render();
+    }
 
     // Calculate frame stats
     auto frameEnd = std::chrono::high_resolution_clock::now();
@@ -242,6 +264,24 @@ void Renderer::updateCameraFrame(int width, int height, const uint8_t* data, siz
     glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, width, height, 0,
                  GL_LUMINANCE, GL_UNSIGNED_BYTE, data);
     glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+void Renderer::onTouchDown(float x, float y) {
+    if (m_game) {
+        m_game->onTouchDown(x, y);
+    }
+}
+
+void Renderer::onTouchMove(float x, float y) {
+    if (m_game) {
+        m_game->onTouchMove(x, y);
+    }
+}
+
+void Renderer::onTouchUp(float x, float y) {
+    if (m_game) {
+        m_game->onTouchUp(x, y);
+    }
 }
 
 } // namespace Engine

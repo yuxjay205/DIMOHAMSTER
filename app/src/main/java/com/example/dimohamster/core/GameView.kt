@@ -64,6 +64,8 @@ class GameView @JvmOverloads constructor(
             MotionEvent.ACTION_DOWN -> {
                 lastTouchX = x
                 lastTouchY = y
+                // Queue native touch call on GL thread to avoid concurrent access
+                queueEvent { NativeRenderer.nativeTouchDown(x, y) }
                 touchListener?.onTouchDown(x, y)
             }
             MotionEvent.ACTION_MOVE -> {
@@ -71,9 +73,11 @@ class GameView @JvmOverloads constructor(
                 val deltaY = y - lastTouchY
                 lastTouchX = x
                 lastTouchY = y
+                queueEvent { NativeRenderer.nativeTouchMove(x, y) }
                 touchListener?.onTouchMove(x, y, deltaX, deltaY)
             }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                queueEvent { NativeRenderer.nativeTouchUp(x, y) }
                 touchListener?.onTouchUp(x, y)
             }
         }
@@ -179,13 +183,19 @@ class GameView @JvmOverloads constructor(
         }
 
         fun onPause() {
-            // Pause audio when app is paused
-            NativeAudio.pauseAll(true)
+            try {
+                NativeAudio.pauseAll(true)
+            } catch (_: UnsatisfiedLinkError) {
+                // Audio not available (FMOD disabled)
+            }
         }
 
         fun onResume() {
-            // Resume audio when app is resumed
-            NativeAudio.pauseAll(false)
+            try {
+                NativeAudio.pauseAll(false)
+            } catch (_: UnsatisfiedLinkError) {
+                // Audio not available (FMOD disabled)
+            }
         }
 
         fun shutdown() {

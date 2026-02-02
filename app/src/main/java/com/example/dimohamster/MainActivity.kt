@@ -361,17 +361,13 @@ class MainActivity : AppCompatActivity(), GameView.OnTouchInputListener {
         Log.i(TAG, "MainActivity destroyed")
     }
 
-    // Touch input callbacks
+    // Touch input callbacks (native touch is handled by GameView.queueEvent on GL thread)
     override fun onTouchDown(x: Float, y: Float) {
-        Log.d(TAG, "Touch down: $x, $y")
     }
 
     override fun onTouchMove(x: Float, y: Float, deltaX: Float, deltaY: Float) {
-        // Use touch delta for camera rotation
-        // NativeRenderer.setCameraRotation can be called here
     }
 
     override fun onTouchUp(x: Float, y: Float) {
-        Log.d(TAG, "Touch up: $x, $y")
     }
 }

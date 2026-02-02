@@ -34,6 +34,11 @@ object NativeRenderer {
     external fun nativeSetCameraFrameEnabled(enabled: Boolean)
     external fun nativeIsCameraFrameEnabled(): Boolean
 
+    // Touch input for game
+    external fun nativeTouchDown(x: Float, y: Float)
+    external fun nativeTouchMove(x: Float, y: Float)
+    external fun nativeTouchUp(x: Float, y: Float)
+
     // Sensor data (for simulation support)
     external fun nativeUpdateSensorData(sensorType: Int, x: Float, y: Float, z: Float)
 
