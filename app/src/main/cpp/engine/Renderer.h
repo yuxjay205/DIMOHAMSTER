@@ -69,6 +69,8 @@ public:
     void onTouchMove(float x, float y);
     void onTouchUp(float x, float y);
 
+    void onNoseDetected(float normX, float normY);
+
 private:
     void setupDefaultShaders();
     void renderTestTriangle();

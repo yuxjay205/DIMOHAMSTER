@@ -31,6 +31,7 @@ object NativeRenderer {
 
     // Device camera frame processing
     external fun nativeUpdateCameraFrame(width: Int, height: Int, data: ByteArray, timestamp: Long)
+    external fun nativeOnNoseDetected(normX: Float, normY: Float)
     external fun nativeSetCameraFrameEnabled(enabled: Boolean)
     external fun nativeIsCameraFrameEnabled(): Boolean
 
@@ -68,6 +69,10 @@ object NativeRenderer {
      */
     fun updateCameraFrame(width: Int, height: Int, data: ByteArray, timestamp: Long) {
         nativeUpdateCameraFrame(width, height, data, timestamp)
+    }
+
+    fun onNoseDetected(normX: Float, normY: Float) {
+        nativeOnNoseDetected(normX, normY)
     }
 
     /**

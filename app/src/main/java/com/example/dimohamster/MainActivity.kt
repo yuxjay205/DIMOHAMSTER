@@ -74,16 +74,27 @@ class MainActivity : AppCompatActivity(), GameView.OnTouchInputListener {
         // Keep screen on during gameplay
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
+        setContentView(R.layout.activity_main)
+        val cameraPreviewView = findViewById<androidx.camera.view.PreviewView>(R.id.cameraPreview)
+        cameraPreviewView.implementationMode = androidx.camera.view.PreviewView.ImplementationMode.COMPATIBLE
+        val gameContainer = findViewById<android.widget.FrameLayout>(R.id.gameContainer)
+
         // Initialize GameView
         gameView = GameView(this)
         gameView.setOnTouchInputListener(this)
-        setContentView(gameView)
+//        setContentView(gameView)
+        gameContainer.addView(gameView)
 
         // Initialize services
         initializeServices()
 
+        cameraService.setPreviewView(cameraPreviewView)
+
         // Request permissions
         requestPermissions()
+
+        // Turn on Camera and request camera permissions
+        setCameraEnabled(true)
 
         Log.i(TAG, "MainActivity created")
     }
@@ -142,6 +153,10 @@ class MainActivity : AppCompatActivity(), GameView.OnTouchInputListener {
             override fun onFrameAvailable(width: Int, height: Int, data: ByteArray, timestamp: Long) {
                 // Pass camera frame to native code for processing
                 NativeRenderer.updateCameraFrame(width, height, data, timestamp)
+            }
+
+            override fun onNoseDetected(normX: Float, normY: Float) {
+                NativeRenderer.onNoseDetected(normX, normY)
             }
 
             override fun onPhotoCaptured(bitmap: Bitmap?) {

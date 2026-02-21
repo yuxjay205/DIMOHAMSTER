@@ -207,6 +207,17 @@ Java_com_example_dimohamster_core_NativeRenderer_nativeTouchUp(
     }
 }
 
+JNIEXPORT void JNICALL
+Java_com_example_dimohamster_core_NativeRenderer_nativeOnNoseDetected(
+        JNIEnv* /* env */,
+        jobject /* this */,
+        jfloat normX,
+        jfloat normY) {
+    if (g_renderer) {
+        g_renderer->onNoseDetected(normX, normY);
+    }
+}
+
 // =============================================================================
 // Camera JNI Functions
 // =============================================================================

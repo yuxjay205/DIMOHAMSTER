@@ -36,6 +36,8 @@ public:
     void onTouchMove(float x, float y);
     void onTouchUp(float x, float y);
 
+    void onNoseMoved(float normX, float normY);
+
 private:
     void resetRound();
     void launchBall(float vx, float vy);
@@ -101,6 +103,9 @@ private:
     // Random
     std::mt19937 m_rng;
     std::uniform_real_distribution<float> m_windDist;
+
+    glm::vec2 m_lastNosePos;
+    float m_lastNoseTime;
 
     bool m_initialized;
 };

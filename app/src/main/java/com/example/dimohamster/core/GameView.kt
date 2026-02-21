@@ -34,6 +34,9 @@ class GameView @JvmOverloads constructor(
     private var lastTouchY = 0f
 
     init {
+        setZOrderOnTop(true)
+        holder.setFormat(android.graphics.PixelFormat.TRANSPARENT)
+
         // Request OpenGL ES 3.2 context
         setEGLContextFactory(ContextFactory())
         setEGLConfigChooser(ConfigChooser())
@@ -170,6 +173,7 @@ class GameView @JvmOverloads constructor(
                 initialized = true
             }
             NativeRenderer.nativeOnSurfaceCreated()
+            NativeRenderer.setClearColor(0f, 0f, 0f, 0f)
             Log.i(TAG, "Surface created")
         }
 

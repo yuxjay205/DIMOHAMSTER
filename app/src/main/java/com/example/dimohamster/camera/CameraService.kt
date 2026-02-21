@@ -9,11 +9,16 @@ import android.util.Log
 import android.util.Size
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.core.Preview
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
 import java.nio.ByteBuffer
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import com.google.mlkit.vision.face.FaceDetection
+import com.google.mlkit.vision.face.FaceDetectorOptions
+import com.google.mlkit.vision.face.FaceLandmark
+import com.google.mlkit.vision.common.InputImage
 
 /**
  * CameraService provides hardware camera access using CameraX.
@@ -47,6 +52,14 @@ class CameraService(private val context: Context) {
     // Target resolution
     private var targetWidth = DEFAULT_WIDTH
     private var targetHeight = DEFAULT_HEIGHT
+    private var previewView: androidx.camera.view.PreviewView? = null
+
+    private val faceDetectorOptions = FaceDetectorOptions.Builder()
+        .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_FAST)
+        .setLandmarkMode(FaceDetectorOptions.LANDMARK_MODE_ALL)
+        .build()
+
+    private val faceDetector = FaceDetection.getClient(faceDetectorOptions)
 
     /**
      * Listener interface for camera frame callbacks
@@ -60,6 +73,8 @@ class CameraService(private val context: Context) {
          * @param timestamp Frame timestamp in nanoseconds
          */
         fun onFrameAvailable(width: Int, height: Int, data: ByteArray, timestamp: Long)
+
+        fun onNoseDetected(normX: Float, normY: Float)
 
         /**
          * Called when a photo is captured
@@ -175,10 +190,16 @@ class CameraService(private val context: Context) {
             .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
             .build()
 
+        val preview = Preview.Builder().build()
+        previewView?.let {
+            preview.setSurfaceProvider(it.surfaceProvider)
+        }
+
         try {
             camera = cameraProvider.bindToLifecycle(
                 lifecycleOwner,
                 cameraSelector,
+                preview,
                 imageAnalyzer,
                 imageCapture
             )
@@ -192,23 +213,52 @@ class CameraService(private val context: Context) {
     /**
      * Process a camera frame and notify listener
      */
+    @androidx.annotation.OptIn(androidx.camera.core.ExperimentalGetImage::class)
     private fun processFrame(imageProxy: ImageProxy) {
         try {
-            val width = imageProxy.width
-            val height = imageProxy.height
-            val timestamp = imageProxy.imageInfo.timestamp
+            val mediaImg = imageProxy.image
+            if (mediaImg != null) {
+                val img = InputImage.fromMediaImage(mediaImg, imageProxy.imageInfo.rotationDegrees)
+                faceDetector.process(img)
+                    .addOnSuccessListener { faces -> for (face in faces) {
+                        val nose = face.getLandmark(FaceLandmark.NOSE_BASE)
 
-            // Convert YUV_420_888 to NV21 format for native processing
-            val nv21Data = yuv420ToNv21(imageProxy)
+                        if (nose != null) {
+                            var normX = nose.position.x / img.width.toFloat()
+                            var normY = nose.position.y / img.height.toFloat()
 
-            // Notify listener
-            frameListener?.onFrameAvailable(width, height, nv21Data, timestamp)
+                            if (currentLensFacing == CameraSelector.LENS_FACING_FRONT) {
+                                normX = 1.0f - normX
+                            }
+
+                            frameListener?.onNoseDetected(normX, normY)
+                        }
+                    }
+                }.addOnCompleteListener {
+                    imageProxy.close()
+                }
+            }
+
+            else {
+                imageProxy.close()
+            }
+//            val width = imageProxy.width
+//            val height = imageProxy.height
+//            val timestamp = imageProxy.imageInfo.timestamp
+//
+//            // Convert YUV_420_888 to NV21 format for native processing
+//            val nv21Data = yuv420ToNv21(imageProxy)
+//
+//            // Notify listener
+//            frameListener?.onFrameAvailable(width, height, nv21Data, timestamp)
 
         } catch (e: Exception) {
             Log.e(TAG, "Error processing frame: ${e.message}")
-        } finally {
             imageProxy.close()
         }
+//        finally {
+//            imageProxy.close()
+//        }
     }
 
     /**
@@ -351,6 +401,10 @@ class CameraService(private val context: Context) {
      */
     fun setTorchEnabled(enabled: Boolean) {
         camera?.cameraControl?.enableTorch(enabled)
+    }
+
+    fun setPreviewView(view: androidx.camera.view.PreviewView) {
+        previewView = view
     }
 
     /**

@@ -284,4 +284,10 @@ void Renderer::onTouchUp(float x, float y) {
     }
 }
 
+void Renderer::onNoseDetected(float normX, float normY) {
+    if (m_game) {
+        m_game->onNoseMoved(normX, normY);
+    }
+}
+
 } // namespace Engine

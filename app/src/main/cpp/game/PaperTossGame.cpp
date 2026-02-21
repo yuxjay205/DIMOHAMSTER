@@ -251,7 +251,7 @@ void PaperTossGame::render() {
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_CULL_FACE);
 
-    drawBackground();
+//    drawBackground();
     drawBin();
     drawWindIndicator();
     drawPaperBall();
@@ -613,6 +613,48 @@ void PaperTossGame::drawMessage() {
                      cx + 12.0f, cy + ah,
                      cx, cy + ah + 18.0f,
                      hintColor);
+    }
+}
+
+void PaperTossGame::onNoseMoved(float normX, float normY) {
+    if (m_state != GameState::READY && m_state != GameState::AIMING)
+        return;
+
+    float screenX = normX * static_cast<float>(m_screenW);
+    float screenY = (1.0f - normY) * static_cast<float>(m_screenH);
+    glm::vec2 currentNose(screenX, screenY);
+
+    if (m_state == GameState::READY) {
+        m_lastNosePos = currentNose;
+        m_lastNoseTime = m_currentTime;
+        m_state = GameState::AIMING;
+        return;
+    }
+
+    if (m_state == GameState::AIMING) {
+        float elapsed = m_currentTime - m_lastNoseTime;
+        if (elapsed < 0.016f)
+            return;
+
+        glm::vec2 delta = currentNose - m_lastNosePos;
+
+        if (delta.y > 15.0f) {
+            float speed = glm::length(delta) / elapsed;
+            speed = glm::clamp(speed * 2.0f, 200.0f, 4000.0f);
+
+            glm::vec2 dir = glm::normalize(delta);
+            glm::vec2 velocity = dir * speed;
+
+            velocity.y = glm::clamp(velocity.y, 600.0f, 2500.0f);
+            velocity.x = glm::clamp(velocity.x, -800.0f, 800.0f);
+
+            launchBall(velocity.x, velocity.y);
+        }
+
+        else if (elapsed > 0.1f) {
+            m_lastNosePos = currentNose;
+            m_lastNoseTime = m_currentTime;
+        }
     }
 }
 
