@@ -23,7 +23,8 @@ import com.example.dimohamster.database.HighScoreDatabase
  */
 @Composable
 fun SettingsOverlay(
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onBackToMainMenu: () -> Unit = {}
 ) {
     // State for settings
     var smoothingFactor by remember { mutableStateOf(0.3f) }  // Default: 30% (heavy smoothing)
@@ -32,7 +33,21 @@ fun SettingsOverlay(
     var showCameraBackground by remember { mutableStateOf(true) }
     var showLeaderboard by remember { mutableStateOf(false) }
 
-    Dialog(onDismissRequest = onDismiss) {
+    // Pause game when settings opens
+    LaunchedEffect(Unit) {
+        NativeRenderer.setPaused(true)
+    }
+
+    // Resume game when settings closes
+    DisposableEffect(Unit) {
+        onDispose {
+            NativeRenderer.setPaused(false)
+        }
+    }
+
+    Dialog(onDismissRequest = {
+        onDismiss()
+    }) {
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -180,7 +195,7 @@ fun SettingsOverlay(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Close button
+                // Close button (resume game)
                 Button(
                     onClick = onDismiss,
                     modifier = Modifier.fillMaxWidth(),
@@ -189,9 +204,28 @@ fun SettingsOverlay(
                     )
                 ) {
                     Text(
-                        text = "Close",
+                        text = "Resume Game",
                         fontSize = 16.sp,
                         color = Color.White
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Back to Main Menu button
+                OutlinedButton(
+                    onClick = {
+                        NativeRenderer.setPaused(false)
+                        onBackToMainMenu()
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = Color(0xFFF44336)
+                    )
+                ) {
+                    Text(
+                        text = "Back to Main Menu",
+                        fontSize = 16.sp
                     )
                 }
             }

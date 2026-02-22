@@ -23,7 +23,8 @@ Renderer::Renderer()
     , m_cameraFrameWidth(0)
     , m_cameraFrameHeight(0)
     , m_cameraFrameTimestamp(0)
-    , m_cameraTexture(0) {
+    , m_cameraTexture(0)
+    , m_paused(false) {
     m_clearColor[0] = 0.1f;
     m_clearColor[1] = 0.1f;
     m_clearColor[2] = 0.15f;
@@ -143,7 +144,10 @@ void Renderer::onDrawFrame(float deltaTime) {
 
     // Update and render game
     if (m_game) {
-        m_game->update(clampedDt);
+        // Only update game logic when not paused
+        if (!m_paused) {
+            m_game->update(clampedDt);
+        }
         m_game->render();
     }
 
@@ -312,6 +316,11 @@ void Renderer::setShowCameraBackground(bool show) {
     if (m_game) {
         m_game->setShowCameraBackground(show);
     }
+}
+
+void Renderer::setPaused(bool paused) {
+    m_paused = paused;
+    LOGI("Game %s", paused ? "paused" : "resumed");
 }
 
 } // namespace Engine

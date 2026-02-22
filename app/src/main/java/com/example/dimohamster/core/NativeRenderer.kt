@@ -48,6 +48,7 @@ object NativeRenderer {
     external fun nativeSetSensitivity(sensitivity: Float)
     external fun nativeSetTrajectoryPreviewEnabled(enabled: Boolean)
     external fun nativeSetShowCameraBackground(show: Boolean)
+    external fun nativeSetPaused(paused: Boolean)
 
     // Convenience methods
     fun setClearColor(r: Float, g: Float, b: Float, a: Float = 1f) {
@@ -130,5 +131,12 @@ object NativeRenderer {
      */
     fun setShowCameraBackground(show: Boolean) {
         nativeSetShowCameraBackground(show)
+    }
+
+    /**
+     * Pause or resume the game
+     */
+    fun setPaused(paused: Boolean) {
+        nativeSetPaused(paused)
     }
 }

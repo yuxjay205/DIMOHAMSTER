@@ -34,7 +34,8 @@ enum class PowerUpType {
     WIDE_PADDLE,   // Makes paddle wider
     SLOW_BALL,     // Slows ball down
     EXTRA_LIFE,    // Gives extra life
-    MULTI_BALL     // Spawns extra balls (future)
+    MULTI_BALL,    // Spawns extra balls (future)
+    BIG_BALL       // Makes ball bigger
 };
 
 struct PowerUp {
@@ -140,6 +141,7 @@ private:
     std::vector<PowerUp> m_powerUps;
     float m_paddleWidthMultiplier;
     float m_ballSpeedMultiplier;
+    float m_ballRadiusMultiplier;
     float m_powerUpTimer;
 
     // Particles

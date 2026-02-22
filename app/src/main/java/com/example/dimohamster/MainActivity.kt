@@ -1,9 +1,14 @@
 package com.example.dimohamster
 
 import android.Manifest
+import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.os.Build
 import android.os.Bundle
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import android.util.Log
 import android.view.View
 import android.view.WindowManager
@@ -24,6 +29,7 @@ import com.example.dimohamster.core.NativeRenderer
 import com.example.dimohamster.sensors.LocationSvc
 import com.example.dimohamster.sensors.SensorBridge
 import com.example.dimohamster.simulation.DeviceSimulator
+import android.content.Intent
 import com.example.dimohamster.ui.SettingsOverlay
 import com.example.dimohamster.ui.PlayerNameDialog
 import com.example.dimohamster.database.HighScoreDatabase
@@ -44,6 +50,7 @@ class MainActivity : AppCompatActivity(), GameView.OnTouchInputListener {
     private lateinit var cameraService: CameraService
     private lateinit var deviceSimulator: DeviceSimulator
     private lateinit var highScoreDatabase: HighScoreDatabase
+    private lateinit var vibrator: Vibrator
 
     // Camera state
     private var isCameraActive = false
@@ -106,7 +113,7 @@ class MainActivity : AppCompatActivity(), GameView.OnTouchInputListener {
             showSettingsDialog = true
         }
 
-        // Always prompt for player name on launch
+        // Load saved player name and show name dialog
         val prefs = getSharedPreferences("game_prefs", MODE_PRIVATE)
         playerName = prefs.getString("player_name", "Player") ?: "Player"
         showNameDialog = true
@@ -124,6 +131,36 @@ class MainActivity : AppCompatActivity(), GameView.OnTouchInputListener {
         GameEventListener.setOnGameOverListener { score, level ->
             highScoreDatabase.insertHighScore(score, level, playerName)
             Log.i(TAG, "High score saved: $playerName - $score points (Level $level)")
+        }
+
+        // Initialize vibrator
+        vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val vibratorManager = getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+            vibratorManager.defaultVibrator
+        } else {
+            @Suppress("DEPRECATION")
+            getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+        }
+
+        // Setup vibration listener for game feedback
+        GameEventListener.setOnVibrationListener { durationMs ->
+            if (vibrator.hasVibrator()) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    vibrator.vibrate(VibrationEffect.createOneShot(durationMs.toLong(), VibrationEffect.DEFAULT_AMPLITUDE))
+                } else {
+                    @Suppress("DEPRECATION")
+                    vibrator.vibrate(durationMs.toLong())
+                }
+            }
+        }
+
+        // Setup main menu navigation listener
+        GameEventListener.setOnGoToMainMenuListener {
+            runOnUiThread {
+                val intent = Intent(this@MainActivity, MainMenuActivity::class.java)
+                startActivity(intent)
+                finish()
+            }
         }
 
         cameraService.setPreviewView(cameraPreviewView)
@@ -354,12 +391,13 @@ class MainActivity : AppCompatActivity(), GameView.OnTouchInputListener {
     private fun setupComposeOverlays() {
         val composeView = androidx.compose.ui.platform.ComposeView(this)
         composeView.setContent {
-            // Player name dialog (first launch)
+            // Player name dialog (shown on game start)
             if (showNameDialog) {
                 PlayerNameDialog(
                     onNameEntered = { name ->
                         playerName = name
                         showNameDialog = false
+                        // Game starts now
 
                         // Save to preferences
                         val prefs = getSharedPreferences("game_prefs", MODE_PRIVATE)
@@ -368,7 +406,7 @@ class MainActivity : AppCompatActivity(), GameView.OnTouchInputListener {
                             apply()
                         }
 
-                        Log.i(TAG, "Player name set to: $name")
+                        Log.i(TAG, "Player name set to: $name, starting game...")
                     }
                 )
             }
@@ -376,7 +414,14 @@ class MainActivity : AppCompatActivity(), GameView.OnTouchInputListener {
             // Settings dialog
             if (showSettingsDialog) {
                 SettingsOverlay(
-                    onDismiss = { showSettingsDialog = false }
+                    onDismiss = { showSettingsDialog = false },
+                    onBackToMainMenu = {
+                        showSettingsDialog = false
+                        // Navigate back to main menu
+                        val intent = Intent(this@MainActivity, MainMenuActivity::class.java)
+                        startActivity(intent)
+                        finish()
+                    }
                 )
             }
         }

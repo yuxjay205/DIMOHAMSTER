@@ -61,6 +61,68 @@ void notifyGameOver(int score, int level) {
     }
 }
 
+// Helper function to trigger vibration
+void triggerVibration(int durationMs) {
+    if (!g_javaVM) {
+        return;
+    }
+
+    JNIEnv* env = nullptr;
+    bool needsDetach = false;
+
+    int getEnvResult = g_javaVM->GetEnv((void**)&env, JNI_VERSION_1_6);
+    if (getEnvResult == JNI_EDETACHED) {
+        if (g_javaVM->AttachCurrentThread(&env, nullptr) != 0) {
+            return;
+        }
+        needsDetach = true;
+    }
+
+    jclass listenerClass = env->FindClass("com/example/dimohamster/core/GameEventListener");
+    if (listenerClass) {
+        jmethodID methodID = env->GetStaticMethodID(listenerClass, "onVibrate", "(I)V");
+        if (methodID) {
+            env->CallStaticVoidMethod(listenerClass, methodID, durationMs);
+        }
+        env->DeleteLocalRef(listenerClass);
+    }
+
+    if (needsDetach) {
+        g_javaVM->DetachCurrentThread();
+    }
+}
+
+// Helper function to go to main menu
+void navigateToMainMenu() {
+    if (!g_javaVM) {
+        return;
+    }
+
+    JNIEnv* env = nullptr;
+    bool needsDetach = false;
+
+    int getEnvResult = g_javaVM->GetEnv((void**)&env, JNI_VERSION_1_6);
+    if (getEnvResult == JNI_EDETACHED) {
+        if (g_javaVM->AttachCurrentThread(&env, nullptr) != 0) {
+            return;
+        }
+        needsDetach = true;
+    }
+
+    jclass listenerClass = env->FindClass("com/example/dimohamster/core/GameEventListener");
+    if (listenerClass) {
+        jmethodID methodID = env->GetStaticMethodID(listenerClass, "onGoToMainMenu", "()V");
+        if (methodID) {
+            env->CallStaticVoidMethod(listenerClass, methodID);
+        }
+        env->DeleteLocalRef(listenerClass);
+    }
+
+    if (needsDetach) {
+        g_javaVM->DetachCurrentThread();
+    }
+}
+
 extern "C" {
 
 // =============================================================================
@@ -461,6 +523,17 @@ Java_com_example_dimohamster_core_NativeRenderer_nativeSetShowCameraBackground(
     }
 }
 
+JNIEXPORT void JNICALL
+Java_com_example_dimohamster_core_NativeRenderer_nativeSetPaused(
+        JNIEnv* /* env */,
+        jobject /* this */,
+        jboolean paused) {
+
+    if (g_renderer) {
+        g_renderer->setPaused(paused == JNI_TRUE);
+    }
+}
+
 // =============================================================================
 // Audio JNI Functions (only if FMOD is available)
 // =============================================================================
@@ -585,9 +658,17 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* /* reserved */) {
 
 } // extern "C"
 
-// External C++ function for game to call
+// External C++ functions for game to call
 namespace Game {
     void reportGameOver(int score, int level) {
         notifyGameOver(score, level);
+    }
+
+    void vibrate(int durationMs) {
+        triggerVibration(durationMs);
+    }
+
+    void goToMainMenu() {
+        navigateToMainMenu();
     }
 }

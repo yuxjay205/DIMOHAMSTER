@@ -7,9 +7,11 @@
 #define LOG_TAG "BreakoutGame"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
 
-// External function to report game over to Java/Kotlin
+// External functions to communicate with Java/Kotlin
 namespace Game {
     extern void reportGameOver(int score, int level);
+    extern void vibrate(int durationMs);
+    extern void goToMainMenu();
 }
 
 namespace Game {
@@ -37,6 +39,7 @@ BreakoutGame::BreakoutGame()
     , m_bricksRemaining(0)
     , m_paddleWidthMultiplier(1.0f)
     , m_ballSpeedMultiplier(1.0f)
+    , m_ballRadiusMultiplier(1.0f)
     , m_powerUpTimer(0.0f)
     , m_screenShake(0.0f)
     , m_currentTime(0.0f)
@@ -115,15 +118,29 @@ void BreakoutGame::resetLevel() {
 }
 
 void BreakoutGame::resetBall() {
-    m_ballPos = glm::vec2(m_paddlePos.x, m_paddlePos.y + m_paddleSize.y + m_ballRadius + 5.0f);
+    float currentRadius = m_ballRadius * m_ballRadiusMultiplier;
+    m_ballPos = glm::vec2(m_paddlePos.x, m_paddlePos.y + m_paddleSize.y + currentRadius + 5.0f);
     m_ballVel = glm::vec2(0.0f);
     m_ballLaunched = false;
 }
 
 void BreakoutGame::nextLevel() {
     m_level++;
-    m_ballSpeed += 50.0f;  // Increase difficulty
+
+    // Ball speed increases more aggressively in infinite mode
+    if (m_level <= 4) {
+        m_ballSpeed += 30.0f;  // Gentle increase for tutorial levels
+    } else {
+        m_ballSpeed += 50.0f;  // Faster increase in infinite mode
+    }
+
+    // Cap ball speed to prevent unplayable speeds
+    if (m_ballSpeed > 1000.0f) {
+        m_ballSpeed = 1000.0f;
+    }
+
     resetLevel();
+    LOGI("Advanced to level %d (ball speed: %.0f)", m_level, m_ballSpeed);
 }
 
 void BreakoutGame::loseLife() {
@@ -165,7 +182,21 @@ void BreakoutGame::generateBricks() {
         glm::vec4(0.6f, 0.2f, 1.0f, 1.0f)   // Purple
     };
 
-    for (int row = 0; row < BRICK_ROWS; row++) {
+    // Determine number of rows based on level
+    // Level 1: 1 row, Level 2: 2 rows, Level 3: 3 rows, Level 4: 4 rows
+    // Level 5+: 6 rows (infinite mode - full rows)
+    int numRows;
+    if (m_level <= 4) {
+        numRows = m_level;  // 1-4 rows for levels 1-4
+    } else {
+        numRows = BRICK_ROWS;  // Full 6 rows for infinite mode (level 5+)
+    }
+
+    // For infinite mode (level 5+), increase brick health based on level
+    int baseHealth = (m_level >= 5) ? 1 + (m_level - 5) / 2 : 1;
+    if (baseHealth > 5) baseHealth = 5;  // Cap max health at 5
+
+    for (int row = 0; row < numRows; row++) {
         for (int col = 0; col < BRICKS_PER_ROW; col++) {
             Brick brick;
             brick.position = glm::vec2(
@@ -173,15 +204,27 @@ void BreakoutGame::generateBricks() {
                 startY - row * (brickHeight + padding)
             );
             brick.size = glm::vec2(brickWidth - padding * 2, brickHeight);
-            brick.color = rowColors[row];
+            brick.color = rowColors[row % BRICK_ROWS];  // Cycle colors if needed
             brick.active = true;
-            brick.health = (row < 2) ? 2 : 1;  // Top 2 rows need 2 hits
+
+            // Health based on level
+            if (m_level <= 3) {
+                // Levels 1-3: all bricks have 1 health (easy)
+                brick.health = 1;
+            } else if (m_level == 4) {
+                // Level 4: only top row (row 0) has 2 health
+                brick.health = (row == 0) ? 2 : 1;
+            } else {
+                // Infinite mode (level 5+): base health + extra for top row
+                brick.health = baseHealth + ((row == 0) ? 1 : 0);
+            }
+
             m_bricks.push_back(brick);
             m_bricksRemaining++;
         }
     }
 
-    LOGI("Generated %d bricks for level %d", m_bricksRemaining, m_level);
+    LOGI("Generated %d bricks (%d rows) for level %d", m_bricksRemaining, numRows, m_level);
 }
 
 void BreakoutGame::update(float dt) {
@@ -217,6 +260,7 @@ void BreakoutGame::update(float dt) {
             if (m_powerUpTimer <= 0.0f) {
                 m_paddleWidthMultiplier = 1.0f;
                 m_ballSpeedMultiplier = 1.0f;
+                m_ballRadiusMultiplier = 1.0f;
             }
         }
 
@@ -237,33 +281,35 @@ void BreakoutGame::update(float dt) {
 }
 
 void BreakoutGame::updatePhysics(float dt) {
+    float currentRadius = m_ballRadius * m_ballRadiusMultiplier;
+
     if (!m_ballLaunched) {
         // Ball follows paddle
         m_ballPos.x = m_paddlePos.x;
-        m_ballPos.y = m_paddlePos.y + m_paddleSize.y + m_ballRadius + 5.0f;
+        m_ballPos.y = m_paddlePos.y + m_paddleSize.y + currentRadius + 5.0f;
     } else {
         // Move ball
         m_ballPos += m_ballVel * dt;
 
         // Wall collisions
-        if (m_ballPos.x - m_ballRadius < 0) {
-            m_ballPos.x = m_ballRadius;
+        if (m_ballPos.x - currentRadius < 0) {
+            m_ballPos.x = currentRadius;
             m_ballVel.x = -m_ballVel.x;
             m_screenShake = 5.0f;
         }
-        if (m_ballPos.x + m_ballRadius > m_screenW) {
-            m_ballPos.x = m_screenW - m_ballRadius;
+        if (m_ballPos.x + currentRadius > m_screenW) {
+            m_ballPos.x = m_screenW - currentRadius;
             m_ballVel.x = -m_ballVel.x;
             m_screenShake = 5.0f;
         }
-        if (m_ballPos.y + m_ballRadius > m_screenH) {
-            m_ballPos.y = m_screenH - m_ballRadius;
+        if (m_ballPos.y + currentRadius > m_screenH) {
+            m_ballPos.y = m_screenH - currentRadius;
             m_ballVel.y = -m_ballVel.y;
             m_screenShake = 5.0f;
         }
 
         // Bottom - lose life
-        if (m_ballPos.y - m_ballRadius < 0) {
+        if (m_ballPos.y - currentRadius < 0) {
             loseLife();
         }
     }
@@ -272,6 +318,8 @@ void BreakoutGame::updatePhysics(float dt) {
 void BreakoutGame::checkCollisions() {
     if (!m_ballLaunched) return;
 
+    float currentRadius = m_ballRadius * m_ballRadiusMultiplier;
+
     // Paddle collision
     float paddleLeft = m_paddlePos.x - m_paddleSize.x * 0.5f;
     float paddleRight = m_paddlePos.x + m_paddleSize.x * 0.5f;
@@ -279,11 +327,11 @@ void BreakoutGame::checkCollisions() {
     float paddleBottom = m_paddlePos.y;
 
     if (m_ballPos.x > paddleLeft && m_ballPos.x < paddleRight &&
-        m_ballPos.y - m_ballRadius < paddleTop && m_ballPos.y > paddleBottom &&
+        m_ballPos.y - currentRadius < paddleTop && m_ballPos.y > paddleBottom &&
         m_ballVel.y < 0) {
 
         // Bounce ball
-        m_ballPos.y = paddleTop + m_ballRadius;
+        m_ballPos.y = paddleTop + currentRadius;
 
         // Angle based on hit position
         float hitPos = (m_ballPos.x - m_paddlePos.x) / (m_paddleSize.x * 0.5f);
@@ -307,22 +355,24 @@ void BreakoutGame::checkCollisions() {
 }
 
 bool BreakoutGame::checkBrickCollision(const Brick& brick) {
+    float currentRadius = m_ballRadius * m_ballRadiusMultiplier;
+
     float brickLeft = brick.position.x;
     float brickRight = brick.position.x + brick.size.x;
     float brickTop = brick.position.y + brick.size.y;
     float brickBottom = brick.position.y;
 
     // Simple AABB collision
-    if (m_ballPos.x + m_ballRadius > brickLeft &&
-        m_ballPos.x - m_ballRadius < brickRight &&
-        m_ballPos.y + m_ballRadius > brickBottom &&
-        m_ballPos.y - m_ballRadius < brickTop) {
+    if (m_ballPos.x + currentRadius > brickLeft &&
+        m_ballPos.x - currentRadius < brickRight &&
+        m_ballPos.y + currentRadius > brickBottom &&
+        m_ballPos.y - currentRadius < brickTop) {
 
         // Determine bounce direction
-        float overlapLeft = (m_ballPos.x + m_ballRadius) - brickLeft;
-        float overlapRight = brickRight - (m_ballPos.x - m_ballRadius);
-        float overlapTop = brickTop - (m_ballPos.y - m_ballRadius);
-        float overlapBottom = (m_ballPos.y + m_ballRadius) - brickBottom;
+        float overlapLeft = (m_ballPos.x + currentRadius) - brickLeft;
+        float overlapRight = brickRight - (m_ballPos.x - currentRadius);
+        float overlapTop = brickTop - (m_ballPos.y - currentRadius);
+        float overlapBottom = (m_ballPos.y + currentRadius) - brickBottom;
 
         float minOverlap = glm::min(glm::min(overlapLeft, overlapRight),
                                      glm::min(overlapTop, overlapBottom));
@@ -351,18 +401,29 @@ void BreakoutGame::breakBrick(int index) {
         glm::vec2 brickCenter = m_bricks[index].position + m_bricks[index].size * 0.5f;
         spawnParticles(brickCenter, m_bricks[index].color);
 
-        // 20% chance to spawn power-up
-        if ((rand() % 100) < 20) {
+        // Pity system: lower lives = higher power-up drop chance
+        // Base 20% + 15% per missing life (3 lives = 20%, 2 lives = 35%, 1 life = 50%)
+        int dropChance = 20 + (3 - m_lives) * 15;
+        if (dropChance > 60) dropChance = 60;  // Cap at 60%
+
+        if ((rand() % 100) < dropChance) {
             spawnPowerUp(brickCenter);
         }
 
         m_screenShake = 10.0f;
+
+        // Vibrate on brick break (stronger vibration)
+        vibrate(50);
+
         LOGI("Brick broken! Score: %d, Remaining: %d", m_score, m_bricksRemaining);
     } else {
         // Damaged brick - darken color
         m_bricks[index].color *= 0.7f;
         m_bricks[index].color.a = 1.0f;
         m_screenShake = 5.0f;
+
+        // Vibrate on brick hit (lighter vibration)
+        vibrate(20);
     }
 }
 
@@ -384,8 +445,8 @@ void BreakoutGame::spawnPowerUp(const glm::vec2& pos) {
     PowerUp powerUp;
     powerUp.position = pos;
 
-    // Random power-up type
-    int type = rand() % 3;
+    // Random power-up type (now includes BIG_BALL)
+    int type = rand() % 4;
     switch (type) {
         case 0:
             powerUp.type = PowerUpType::WIDE_PADDLE;
@@ -398,6 +459,10 @@ void BreakoutGame::spawnPowerUp(const glm::vec2& pos) {
         case 2:
             powerUp.type = PowerUpType::EXTRA_LIFE;
             powerUp.color = glm::vec4(1.0f, 0.3f, 0.3f, 1.0f);  // Red
+            break;
+        case 3:
+            powerUp.type = PowerUpType::BIG_BALL;
+            powerUp.color = glm::vec4(1.0f, 0.8f, 0.2f, 1.0f);  // Orange/Gold
             break;
     }
 
@@ -469,6 +534,12 @@ void BreakoutGame::activatePowerUp(PowerUpType type) {
             // Future feature
             LOGI("Power-up: Multi Ball (not implemented yet)");
             break;
+
+        case PowerUpType::BIG_BALL:
+            m_ballRadiusMultiplier = 2.0f;  // Double the ball size
+            m_powerUpTimer = 10.0f;  // 10 seconds
+            LOGI("Power-up: Big Ball!");
+            break;
     }
 }
 
@@ -481,23 +552,34 @@ void BreakoutGame::onTouchDown(float x, float y) {
     float gy = (float)m_screenH - y;
 
     if (m_state == GameState::GAME_OVER) {
-        // Check if restart button was tapped
+        // Button dimensions (must match drawUI)
         float cx = m_screenW * 0.5f;
         float cy = m_screenH * 0.5f;
-        float buttonW = 200.0f;
-        float buttonH = 60.0f;
+        float buttonW = 220.0f;
+        float buttonH = 50.0f;
         float buttonX = cx - buttonW * 0.5f;
-        float buttonY = cy - 60;
+        float restartButtonY = cy - 40;
+        float menuButtonY = restartButtonY - buttonH - 15;
 
+        // Check if restart button was tapped
         if (x >= buttonX && x <= buttonX + buttonW &&
-            gy >= buttonY && gy <= buttonY + buttonH) {
+            gy >= restartButtonY && gy <= restartButtonY + buttonH) {
             // Restart button pressed!
             m_level = 1;
             m_score = 0;
             m_lives = 3;
             m_ballSpeed = 500.0f;
             resetLevel();
+            vibrate(30);
             LOGI("Game restarted by button press!");
+        }
+        // Check if menu button was tapped
+        else if (x >= buttonX && x <= buttonX + buttonW &&
+                 gy >= menuButtonY && gy <= menuButtonY + buttonH) {
+            // Menu button pressed!
+            vibrate(30);
+            goToMainMenu();
+            LOGI("Going to main menu!");
         }
     }
     else if (m_state == GameState::READY && !m_ballLaunched) {
@@ -690,17 +772,23 @@ void BreakoutGame::drawPaddle() {
 }
 
 void BreakoutGame::drawBall() {
-    // Glow effect
-    drawCircle(m_ballPos.x, m_ballPos.y, m_ballRadius + 4,
+    float currentRadius = m_ballRadius * m_ballRadiusMultiplier;
+
+    // Glow effect (bigger glow for big ball)
+    float glowSize = (m_ballRadiusMultiplier > 1.0f) ? 6.0f : 4.0f;
+    drawCircle(m_ballPos.x, m_ballPos.y, currentRadius + glowSize,
               glm::vec4(1.0f, 1.0f, 1.0f, 0.2f));
 
-    // Main ball
-    drawCircle(m_ballPos.x, m_ballPos.y, m_ballRadius,
-              glm::vec4(1.0f, 0.9f, 0.3f, 1.0f));
+    // Main ball - orange tint when big
+    glm::vec4 ballColor = (m_ballRadiusMultiplier > 1.0f) ?
+        glm::vec4(1.0f, 0.7f, 0.2f, 1.0f) :  // Orange when powered up
+        glm::vec4(1.0f, 0.9f, 0.3f, 1.0f);   // Normal yellow
+    drawCircle(m_ballPos.x, m_ballPos.y, currentRadius, ballColor);
 
     // Highlight
-    drawCircle(m_ballPos.x - 2, m_ballPos.y + 2, m_ballRadius * 0.4f,
-              glm::vec4(1.0f, 1.0f, 1.0f, 0.6f));
+    float highlightOffset = currentRadius * 0.25f;
+    drawCircle(m_ballPos.x - highlightOffset, m_ballPos.y + highlightOffset,
+              currentRadius * 0.4f, glm::vec4(1.0f, 1.0f, 1.0f, 0.6f));
 }
 
 void BreakoutGame::drawBricks() {
@@ -782,6 +870,13 @@ void BreakoutGame::drawPowerUps() {
                 drawCircle(powerUp.position.x, powerUp.position.y, 2, iconColor, 6);
                 drawCircle(powerUp.position.x - 5, powerUp.position.y, 2, iconColor, 6);
                 drawCircle(powerUp.position.x + 5, powerUp.position.y, 2, iconColor, 6);
+                break;
+
+            case PowerUpType::BIG_BALL:
+                // Big circle with smaller circle inside
+                drawCircle(powerUp.position.x, powerUp.position.y, iconSize * 0.7f, iconColor, 12);
+                drawCircle(powerUp.position.x, powerUp.position.y, iconSize * 0.3f,
+                          glm::vec4(powerUp.color.r, powerUp.color.g, powerUp.color.b, 1.0f), 8);
                 break;
         }
     }
@@ -899,29 +994,48 @@ void BreakoutGame::drawUI() {
         float alpha = glm::min(m_stateTimer / 0.5f, 1.0f);
 
         // Background box
-        drawQuad(cx - 200, cy - 60, 400, 120,
+        drawQuad(cx - 180, cy - 50, 360, 100,
                 glm::vec4(0.0f, 0.0f, 0.0f, 0.7f * alpha));
 
-        // "LEVEL X COMPLETE!" text
-        glm::vec4 textColor(0.2f, 1.0f, 0.3f, alpha);
+        int nextLevel = m_level + 1;
 
-        // Draw "LEVEL"
-        float lvlCharW = 35.0f;
-        float lvlCharH = 40.0f;
-        float lvlSpacing = 6.0f;
-        float lvlWidth = (5 * lvlCharW) + (4 * lvlSpacing);
-        drawText("LEVEL", cx - lvlWidth * 0.5f, cy + 30, lvlCharW, lvlCharH, lvlSpacing, textColor);
+        if (nextLevel >= 5) {
+            // Entering or continuing endless mode - special message
+            glm::vec4 goldColor(1.0f, 0.85f, 0.0f, alpha);
 
-        // Draw level number
-        float numY = cy - 10;
-        drawDigit(m_level, cx - 20, numY, 40, 60, textColor);
+            // Draw "ENDLESS"
+            float endCharW = 30.0f;
+            float endCharH = 35.0f;
+            float endSpacing = 5.0f;
+            float endWidth = (7 * endCharW) + (6 * endSpacing);
+            drawText("ENDLESS", cx - endWidth * 0.5f, cy + 10, endCharW, endCharH, endSpacing, goldColor);
 
-        // Draw "COMPLETE"
-        float compCharW = 30.0f;
-        float compCharH = 35.0f;
-        float compSpacing = 5.0f;
-        float compWidth = (8 * compCharW) + (7 * compSpacing);
-        drawText("COMPLETE", cx - compWidth * 0.5f, cy - 60, compCharW, compCharH, compSpacing, textColor);
+            // Draw level number below
+            float numWidth = 50.0f;
+            drawDigit(nextLevel, cx - numWidth * 0.5f, cy - 45, numWidth, 40, goldColor);
+        } else {
+            // Show next level number: "LEVEL 2", "LEVEL 3", etc.
+            glm::vec4 textColor(0.2f, 1.0f, 0.3f, alpha);
+
+            // Draw "LEVEL"
+            float lvlCharW = 35.0f;
+            float lvlCharH = 45.0f;
+            float lvlSpacing = 6.0f;
+            float lvlWidth = (5 * lvlCharW) + (4 * lvlSpacing);
+
+            // Calculate total width including number
+            float numWidth = 50.0f;
+            float gap = 20.0f;
+            float totalWidth = lvlWidth + gap + numWidth;
+
+            float startX = cx - totalWidth * 0.5f;
+
+            // Draw "LEVEL"
+            drawText("LEVEL", startX, cy - lvlCharH * 0.5f, lvlCharW, lvlCharH, lvlSpacing, textColor);
+
+            // Draw level number next to it
+            drawDigit(nextLevel, startX + lvlWidth + gap, cy - lvlCharH * 0.5f, numWidth, lvlCharH, textColor);
+        }
     }
     else if (m_state == GameState::GAME_OVER) {
         float cx = m_screenW * 0.5f;
@@ -965,11 +1079,11 @@ void BreakoutGame::drawUI() {
             }
         }
 
-        // Restart button (green, no text)
-        float buttonW = 200.0f;
-        float buttonH = 60.0f;
+        // Restart button with text
+        float buttonW = 220.0f;
+        float buttonH = 50.0f;
         float buttonX = cx - buttonW * 0.5f;
-        float buttonY = cy - 60;
+        float buttonY = cy - 40;
 
         // Button background (green)
         glm::vec4 buttonColor(0.2f, 0.8f, 0.3f, alpha);
@@ -986,24 +1100,59 @@ void BreakoutGame::drawUI() {
         // Main button
         drawQuad(buttonX, buttonY, buttonW, buttonH, buttonColor);
         // Highlight
-        drawQuad(buttonX + 10, buttonY + buttonH - 15, buttonW - 20, 8,
+        drawQuad(buttonX + 10, buttonY + buttonH - 12, buttonW - 20, 6,
                 glm::vec4(1.0f, 1.0f, 1.0f, 0.3f * alpha));
+
+        // Draw "RESTART" text on button
+        float restartCharW = 20.0f;
+        float restartCharH = 26.0f;
+        float restartSpacing = 3.0f;
+        float restartWidth = (7 * restartCharW) + (6 * restartSpacing);  // "RESTART" = 7 chars
+        float restartX = cx - restartWidth * 0.5f;
+        float restartY = buttonY + (buttonH - restartCharH) * 0.5f;
+        glm::vec4 textOnButtonColor(1.0f, 1.0f, 1.0f, alpha);
+        drawText("RESTART", restartX, restartY, restartCharW, restartCharH, restartSpacing, textOnButtonColor);
+
+        // Menu button (below restart)
+        float menuButtonY = buttonY - buttonH - 15;
+
+        // Button background (blue-gray)
+        glm::vec4 menuButtonColor(0.4f, 0.5f, 0.6f, alpha);
+
+        // Shadow
+        drawQuad(buttonX + 4, menuButtonY - 4, buttonW, buttonH,
+                glm::vec4(0.0f, 0.0f, 0.0f, 0.4f * alpha));
+        // Main button
+        drawQuad(buttonX, menuButtonY, buttonW, buttonH, menuButtonColor);
+        // Highlight
+        drawQuad(buttonX + 10, menuButtonY + buttonH - 12, buttonW - 20, 6,
+                glm::vec4(1.0f, 1.0f, 1.0f, 0.3f * alpha));
+
+        // Draw "MENU" text on button
+        float menuCharW = 28.0f;
+        float menuCharH = 26.0f;
+        float menuSpacing = 5.0f;
+        float menuWidth = (4 * menuCharW) + (3 * menuSpacing);  // "MENU" = 4 chars
+        float menuTextX = cx - menuWidth * 0.5f;
+        float menuTextY = menuButtonY + (buttonH - menuCharH) * 0.5f;
+        drawText("MENU", menuTextX, menuTextY, menuCharW, menuCharH, menuSpacing, textOnButtonColor);
     }
 }
 
 void BreakoutGame::drawLetter(char letter, float x, float y, float w, float h, const glm::vec4& color) {
     float thick = w * 0.15f;  // Thickness of strokes
 
+    // y is bottom of letter, y+h is top (OpenGL coords: y=0 at bottom)
     switch(letter) {
         case 'G':
-            drawQuad(x, y, w, thick, color);  // Top
+            drawQuad(x, y + h - thick, w, thick, color);  // Top
             drawQuad(x, y, thick, h, color);  // Left
-            drawQuad(x, y + h - thick, w, thick, color);  // Bottom
-            drawQuad(x + w - thick, y + h * 0.5f, thick, h * 0.5f, color);  // Right bottom
+            drawQuad(x, y, w, thick, color);  // Bottom
+            drawQuad(x + w - thick, y, thick, h * 0.5f, color);  // Right bottom
             drawQuad(x + w * 0.5f, y + h * 0.5f - thick * 0.5f, w * 0.5f, thick, color);  // Middle
             break;
         case 'A':
-            drawQuad(x, y, w, thick, color);  // Top
+            drawQuad(x, y + h - thick, w, thick, color);  // Top
             drawQuad(x, y, thick, h, color);  // Left
             drawQuad(x + w - thick, y, thick, h, color);  // Right
             drawQuad(x, y + h * 0.5f - thick * 0.5f, w, thick, color);  // Middle
@@ -1011,68 +1160,81 @@ void BreakoutGame::drawLetter(char letter, float x, float y, float w, float h, c
         case 'M':
             drawQuad(x, y, thick, h, color);  // Left
             drawQuad(x + w - thick, y, thick, h, color);  // Right
-            drawQuad(x + thick, y, w * 0.35f - thick, thick, color);  // Top left diagonal
-            drawQuad(x + w * 0.65f, y, w * 0.35f - thick, thick, color);  // Top right diagonal
-            drawQuad(x + w * 0.5f - thick * 0.5f, y, thick, h * 0.5f, color);  // Middle
+            drawQuad(x + thick, y + h - thick, w * 0.35f - thick, thick, color);  // Top left
+            drawQuad(x + w * 0.65f, y + h - thick, w * 0.35f - thick, thick, color);  // Top right
+            drawQuad(x + w * 0.5f - thick * 0.5f, y + h * 0.5f, thick, h * 0.5f, color);  // Middle down
             break;
         case 'E':
-            drawQuad(x, y, w, thick, color);  // Top
+            drawQuad(x, y + h - thick, w, thick, color);  // Top
             drawQuad(x, y, thick, h, color);  // Left
             drawQuad(x, y + h * 0.5f - thick * 0.5f, w * 0.8f, thick, color);  // Middle
-            drawQuad(x, y + h - thick, w, thick, color);  // Bottom
+            drawQuad(x, y, w, thick, color);  // Bottom
             break;
         case 'O':
-            drawQuad(x, y, w, thick, color);  // Top
+            drawQuad(x, y + h - thick, w, thick, color);  // Top
             drawQuad(x, y, thick, h, color);  // Left
             drawQuad(x + w - thick, y, thick, h, color);  // Right
-            drawQuad(x, y + h - thick, w, thick, color);  // Bottom
+            drawQuad(x, y, w, thick, color);  // Bottom
             break;
         case 'V':
-            drawQuad(x, y, thick * 1.5f, h * 0.7f, color);  // Left
-            drawQuad(x + w - thick * 1.5f, y, thick * 1.5f, h * 0.7f, color);  // Right
-            drawQuad(x + w * 0.3f, y + h * 0.7f, w * 0.4f, thick * 1.5f, color);  // Bottom
+            drawQuad(x, y + h * 0.3f, thick * 1.5f, h * 0.7f, color);  // Left
+            drawQuad(x + w - thick * 1.5f, y + h * 0.3f, thick * 1.5f, h * 0.7f, color);  // Right
+            drawQuad(x + w * 0.3f, y, w * 0.4f, thick * 1.5f, color);  // Bottom point
             break;
         case 'R':
-            drawQuad(x, y, w * 0.8f, thick, color);  // Top
+            drawQuad(x, y + h - thick, w * 0.8f, thick, color);  // Top
             drawQuad(x, y, thick, h, color);  // Left
-            drawQuad(x + w - thick, y, thick, h * 0.5f, color);  // Right top
+            drawQuad(x + w - thick, y + h * 0.5f, thick, h * 0.5f, color);  // Right top
             drawQuad(x, y + h * 0.5f - thick * 0.5f, w, thick, color);  // Middle
-            drawQuad(x + w * 0.5f, y + h * 0.5f, thick * 1.5f, h * 0.5f, color);  // Diagonal leg
+            drawQuad(x + w * 0.5f, y, thick * 1.5f, h * 0.5f, color);  // Diagonal leg
             break;
         case 'F':
-            drawQuad(x, y, w, thick, color);  // Top
+            drawQuad(x, y + h - thick, w, thick, color);  // Top
             drawQuad(x, y, thick, h, color);  // Left
             drawQuad(x, y + h * 0.5f - thick * 0.5f, w * 0.7f, thick, color);  // Middle
             break;
         case 'I':
-            drawQuad(x, y, w, thick, color);  // Top
+            drawQuad(x, y + h - thick, w, thick, color);  // Top
             drawQuad(x + w * 0.5f - thick * 0.5f, y, thick, h, color);  // Middle
-            drawQuad(x, y + h - thick, w, thick, color);  // Bottom
+            drawQuad(x, y, w, thick, color);  // Bottom
             break;
         case 'N':
             drawQuad(x, y, thick, h, color);  // Left
             drawQuad(x + w - thick, y, thick, h, color);  // Right
-            drawQuad(x + thick, y, w - thick * 2, thick * 1.5f, color);  // Diagonal
+            drawQuad(x + thick, y + h - thick * 1.5f, w - thick * 2, thick * 1.5f, color);  // Top bar
             break;
         case 'L':
             drawQuad(x, y, thick, h, color);  // Left
-            drawQuad(x, y + h - thick, w, thick, color);  // Bottom
+            drawQuad(x, y, w, thick, color);  // Bottom
             break;
         case 'S':
-            drawQuad(x, y, w, thick, color);  // Top
-            drawQuad(x, y, thick, h * 0.5f, color);  // Left top
+            drawQuad(x, y + h - thick, w, thick, color);  // Top
+            drawQuad(x, y + h * 0.5f, thick, h * 0.5f - thick, color);  // Left top
             drawQuad(x, y + h * 0.5f - thick * 0.5f, w, thick, color);  // Middle
-            drawQuad(x + w - thick, y + h * 0.5f, thick, h * 0.5f, color);  // Right bottom
-            drawQuad(x, y + h - thick, w, thick, color);  // Bottom
+            drawQuad(x + w - thick, y + thick, thick, h * 0.5f - thick, color);  // Right bottom
+            drawQuad(x, y, w, thick, color);  // Bottom
             break;
         case 'C':
-            drawQuad(x, y, w, thick, color);  // Top
+            drawQuad(x, y + h - thick, w, thick, color);  // Top
             drawQuad(x, y, thick, h, color);  // Left
-            drawQuad(x, y + h - thick, w, thick, color);  // Bottom
+            drawQuad(x, y, w, thick, color);  // Bottom
             break;
         case 'T':
-            drawQuad(x, y, w, thick, color);  // Top
+            drawQuad(x, y + h - thick, w, thick, color);  // Top
             drawQuad(x + w * 0.5f - thick * 0.5f, y, thick, h, color);  // Middle
+            break;
+        case 'D':
+            drawQuad(x, y, thick, h, color);  // Left
+            drawQuad(x, y + h - thick, w * 0.7f, thick, color);  // Top
+            drawQuad(x, y, w * 0.7f, thick, color);  // Bottom
+            drawQuad(x + w - thick, y + thick, thick, h - thick * 2, color);  // Right (curved part)
+            drawQuad(x + w * 0.7f, y + h - thick * 1.5f, thick, thick * 1.5f, color);  // Top corner
+            drawQuad(x + w * 0.7f, y, thick, thick * 1.5f, color);  // Bottom corner
+            break;
+        case 'U':
+            drawQuad(x, y + thick, thick, h - thick, color);  // Left
+            drawQuad(x + w - thick, y + thick, thick, h - thick, color);  // Right
+            drawQuad(x, y, w, thick, color);  // Bottom
             break;
     }
 }

@@ -76,6 +76,8 @@ public:
     void setSensitivity(float sensitivity);
     void setTrajectoryPreviewEnabled(bool enabled);
     void setShowCameraBackground(bool show);
+    void setPaused(bool paused);
+    bool isPaused() const { return m_paused; }
 
 private:
     void setupDefaultShaders();
@@ -116,6 +118,7 @@ private:
 
     // Game
     std::unique_ptr<Game::BreakoutGame> m_game;
+    bool m_paused;
 };
 
 } // namespace Engine
