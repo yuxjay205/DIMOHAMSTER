@@ -47,7 +47,7 @@ class CameraService(private val context: Context) {
     // Camera state
     private var isInitialized = false
     private var isRunning = false
-    private var currentLensFacing = CameraSelector.LENS_FACING_BACK
+    private var currentLensFacing = CameraSelector.LENS_FACING_FRONT
 
     // Target resolution
     private var targetWidth = DEFAULT_WIDTH
