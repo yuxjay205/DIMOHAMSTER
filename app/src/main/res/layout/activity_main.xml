@@ -3,13 +3,21 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
+    <!-- Layer 1: Camera Preview (bottom) -->
     <androidx.camera.view.PreviewView
         android:id="@+id/cameraPreview"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
+    <!-- Layer 2: OpenGL Game View -->
     <FrameLayout
         android:id="@+id/gameContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <!-- Layer 3: Paper Toss Overlay (top) -->
+    <com.example.dimohamster.papertoss.PaperTossView
+        android:id="@+id/paperTossView"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 

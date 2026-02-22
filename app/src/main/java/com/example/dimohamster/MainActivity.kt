@@ -3,6 +3,7 @@ package com.example.dimohamster
 import android.Manifest
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.graphics.RectF
 import android.os.Bundle
 import android.util.Log
 import android.view.View
@@ -16,11 +17,13 @@ import androidx.core.view.WindowInsetsControllerCompat
 import com.example.dimohamster.camera.CameraService
 import com.example.dimohamster.core.GameView
 import com.example.dimohamster.core.NativeRenderer
+import com.example.dimohamster.papertoss.CVTarget
+import com.example.dimohamster.papertoss.PaperTossView
 import com.example.dimohamster.sensors.LocationSvc
 import com.example.dimohamster.sensors.SensorBridge
 import com.example.dimohamster.simulation.DeviceSimulator
 
-class MainActivity : AppCompatActivity(), GameView.OnTouchInputListener {
+class MainActivity : AppCompatActivity(), GameView.OnTouchInputListener, PaperTossView.GameEventListener {
 
     companion object {
         private const val TAG = "MainActivity"
@@ -30,6 +33,7 @@ class MainActivity : AppCompatActivity(), GameView.OnTouchInputListener {
     }
 
     private lateinit var gameView: GameView
+    private lateinit var paperTossView: PaperTossView
     private lateinit var locationSvc: LocationSvc
     private lateinit var sensorBridge: SensorBridge
     private lateinit var cameraService: CameraService
@@ -37,6 +41,10 @@ class MainActivity : AppCompatActivity(), GameView.OnTouchInputListener {
 
     // Camera state
     private var isCameraActive = false
+
+    // Paper toss game state
+    private var paperTossScore = 0
+    private var paperTossHighScore = 0
 
     // Permission launcher for location
     private val locationPermissionLauncher = registerForActivityResult(
@@ -84,6 +92,11 @@ class MainActivity : AppCompatActivity(), GameView.OnTouchInputListener {
         gameView.setOnTouchInputListener(this)
 //        setContentView(gameView)
         gameContainer.addView(gameView)
+
+        // Initialize PaperTossView (from XML layout)
+        paperTossView = findViewById(R.id.paperTossView)
+        paperTossView.setGameEventListener(this)
+        configurePaperTossPhysics()
 
         // Initialize services
         initializeServices()
@@ -310,6 +323,190 @@ class MainActivity : AppCompatActivity(), GameView.OnTouchInputListener {
      */
     fun getCameraService(): CameraService = cameraService
 
+    /**
+     * Get the paper toss view for direct control
+     */
+    fun getPaperTossView(): PaperTossView = paperTossView
+
+    // ========================================================================
+    // PAPER TOSS CONFIGURATION
+    // ========================================================================
+
+    /**
+     * Configure paper toss physics parameters.
+     * Adjust these values to change the game feel.
+     */
+    private fun configurePaperTossPhysics() {
+        paperTossView.physics.apply {
+            // Gravity - how fast the paper ball falls (pixels per frame^2)
+            gravity = 0.5f
+
+            // Air resistance - velocity multiplier per frame (0.99 = 1% loss)
+            airResistance = 0.985f
+
+            // Depth drag - how quickly Z velocity decays
+            depthDrag = 0.98f
+
+            // Throw power - multiplier for swipe velocity
+            throwPower = 1.2f
+
+            // Target depth - how "deep" in AR space the target is (0.0-1.0)
+            targetDepth = 0.85f
+
+            // How much upward swipes push into depth
+            depthFromUpwardVelocity = 0.025f
+        }
+
+        paperTossView.probability.apply {
+            // Minimum success chance (even bad throws have some hope)
+            minProbability = 0.05f
+
+            // Maximum success chance (even perfect throws can fail for tension)
+            maxProbability = 0.90f
+
+            // Bonus per consecutive hit
+            streakBonus = 0.025f
+
+            // Max streak bonus
+            maxStreakBonus = 0.12f
+        }
+
+        // Debug visualization (set to false for production)
+        paperTossView.showDebugOverlay = true
+        paperTossView.showTrajectoryPreview = true
+    }
+
+    /**
+     * Update the paper toss target from CV detection results.
+     * Call this when your ML Kit / CV system detects a target object.
+     *
+     * @param boundingBox The detected object's bounding box in screen coordinates
+     * @param depth Estimated depth (0.0 = close, 1.0 = far)
+     * @param confidence Detection confidence (0.0 - 1.0)
+     * @param label Object label (e.g., "trash_can", "cup")
+     */
+    fun updatePaperTossTarget(
+        boundingBox: RectF,
+        depth: Float = 0.85f,
+        confidence: Float = 1.0f,
+        label: String = "target"
+    ) {
+        val screenWidth = paperTossView.width.toFloat()
+        val screenHeight = paperTossView.height.toFloat()
+
+        // Estimate base success rate from target size and depth
+        val baseRate = paperTossView.probability.estimateBaseRate(
+            targetWidth = boundingBox.width(),
+            targetHeight = boundingBox.height(),
+            screenWidth = screenWidth,
+            screenHeight = screenHeight,
+            targetDepth = depth
+        ) * confidence
+
+        val target = CVTarget(
+            boundingBox = boundingBox,
+            estimatedDepth = depth,
+            baseSuccessRate = baseRate,
+            label = label
+        )
+
+        paperTossView.setTarget(target)
+    }
+
+    /**
+     * Simulates a target for testing when no CV detection is available.
+     * Remove this in production and use updatePaperTossTarget() with real CV data.
+     */
+    fun simulatePaperTossTarget() {
+        val screenWidth = paperTossView.width.toFloat()
+        val screenHeight = paperTossView.height.toFloat()
+
+        if (screenWidth == 0f || screenHeight == 0f) return
+
+        // Simulate a trash can in upper-center of screen
+        val targetWidth = screenWidth * 0.3f
+        val targetHeight = screenHeight * 0.15f
+        val centerX = screenWidth / 2f
+        val centerY = screenHeight * 0.25f
+
+        val boundingBox = RectF(
+            centerX - targetWidth / 2f,
+            centerY - targetHeight / 2f,
+            centerX + targetWidth / 2f,
+            centerY + targetHeight / 2f
+        )
+
+        updatePaperTossTarget(boundingBox, depth = 0.85f, confidence = 1.0f, label = "trash_can")
+    }
+
+    /**
+     * Clear the paper toss target (no target visible).
+     */
+    fun clearPaperTossTarget() {
+        paperTossView.setTarget(null)
+    }
+
+    // ========================================================================
+    // PAPER TOSS GAME EVENT CALLBACKS
+    // ========================================================================
+
+    override fun onTouchStart(x: Float, y: Float) {
+        // Paper ball picked up - play pickup sound here
+        Log.d(TAG, "Paper toss: Touch started at ($x, $y)")
+    }
+
+    override fun onThrow(velocityX: Float, velocityY: Float, velocityZ: Float, angle: Float) {
+        // Paper thrown - play whoosh sound here
+        Log.d(TAG, "Paper toss: Throw! velocity=($velocityX, $velocityY, $velocityZ), angle=$angle")
+    }
+
+    override fun onSuccess(hitZone: CVTarget.HitZone, probability: Float, consecutiveHits: Int) {
+        // Calculate and add score
+        val basePoints = when (hitZone) {
+            CVTarget.HitZone.BULLSEYE -> 100
+            CVTarget.HitZone.INNER -> 75
+            CVTarget.HitZone.OUTER -> 50
+        }
+        val streakMultiplier = 1f + (consecutiveHits - 1) * 0.1f
+        val points = (basePoints * streakMultiplier).toInt()
+
+        paperTossScore += points
+        if (paperTossScore > paperTossHighScore) {
+            paperTossHighScore = paperTossScore
+        }
+
+        // Play success sound, trigger haptics, update UI here
+        Log.i(TAG, "Paper toss: SUCCESS! +$points (streak: $consecutiveHits, total: $paperTossScore)")
+    }
+
+    override fun onBounceOut(hitZone: CVTarget.HitZone, probability: Float) {
+        // Play bounce sound here
+        Log.i(TAG, "Paper toss: Bounced out! (zone: $hitZone)")
+    }
+
+    override fun onMiss() {
+        // Play miss sound here
+        Log.i(TAG, "Paper toss: Miss! Score: $paperTossScore")
+    }
+
+    /**
+     * Get current paper toss score.
+     */
+    fun getPaperTossScore(): Int = paperTossScore
+
+    /**
+     * Get paper toss high score.
+     */
+    fun getPaperTossHighScore(): Int = paperTossHighScore
+
+    /**
+     * Reset paper toss game.
+     */
+    fun resetPaperTossGame() {
+        paperTossScore = 0
+        paperTossView.resetStats()
+    }
+
     private fun requestPermissions() {
         val permissionsToRequest = mutableListOf<String>()
 
@@ -345,6 +542,12 @@ class MainActivity : AppCompatActivity(), GameView.OnTouchInputListener {
             if (isCameraActive && cameraService.hasPermission()) {
                 cameraService.startCamera(this)
             }
+        }
+
+        // Initialize simulated target after layout is complete
+        // Replace this with your actual CV detection in production
+        paperTossView.post {
+            simulatePaperTossTarget()
         }
 
         Log.i(TAG, "MainActivity resumed")
