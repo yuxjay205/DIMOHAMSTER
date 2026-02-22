@@ -2,6 +2,7 @@ package com.example.dimohamster.papertoss
 
 import kotlin.math.atan2
 import kotlin.math.cos
+import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.math.sqrt
 
@@ -215,12 +216,12 @@ class ProjectilePhysics {
         // APPLY AIR RESISTANCE / DRAG
         // ====================================================================
         // Drag slows down all velocity components over time
-        val dragFactor = kotlin.math.pow(airResistance.toDouble(), timeScale.toDouble()).toFloat()
+        val dragFactor = airResistance.toDouble().pow(timeScale.toDouble()).toFloat()
         projectile.velocityX *= dragFactor
         projectile.velocityY *= dragFactor
 
         // Depth has its own drag coefficient
-        val zDragFactor = kotlin.math.pow(depthDrag.toDouble(), timeScale.toDouble()).toFloat()
+        val zDragFactor = depthDrag.toDouble().pow(timeScale.toDouble()).toFloat()
         projectile.velocityZ *= zDragFactor
 
         // ====================================================================

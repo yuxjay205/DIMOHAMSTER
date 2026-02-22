@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "com.example.dimohamster"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.example.dimohamster"
@@ -115,7 +115,7 @@ dependencies {
     // AndroidX Core
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
-    implementation("androidx.appcompat:appcompat:1.6.1")
+    implementation("androidx.appcompat:appcompat:1.7.1")
 
     // Compose
     implementation(libs.androidx.activity.compose)
@@ -126,17 +126,17 @@ dependencies {
     implementation(libs.androidx.compose.material3)
 
     // Google Play Services - Location
-    implementation("com.google.android.gms:play-services-location:21.1.0")
+    implementation("com.google.android.gms:play-services-location:21.3.0")
 
     // CameraX for camera functionality
-    val cameraxVersion = "1.3.1"
+    val cameraxVersion = "1.5.3"
     implementation("androidx.camera:camera-core:$cameraxVersion")
     implementation("androidx.camera:camera-camera2:$cameraxVersion")
     implementation("androidx.camera:camera-lifecycle:$cameraxVersion")
     implementation("androidx.camera:camera-view:$cameraxVersion")
 
     // ML Kit for face tracking
-    implementation("com.google.mlkit:face-detection:16.1.5")
+    implementation("com.google.mlkit:face-detection:16.1.7")
 
     // Testing
     testImplementation(libs.junit)

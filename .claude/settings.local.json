@@ -16,7 +16,20 @@
       "Bash(./gradlew assembleDebug:*)",
       "Bash(adb logcat:*)",
       "Bash(adb install:*)",
-      "Bash(adb shell:*)"
+      "Bash(adb shell:*)",
+      "Bash(./gradlew lint:*)",
+      "Bash(adb devices:*)",
+      "Bash(adb kill-server:*)",
+      "Bash(adb start-server:*)",
+      "Bash(./gradlew installDebug:*)",
+      "Bash(adb connect:*)",
+      "Bash(adb disconnect:*)",
+      "Bash(taskkill:*)",
+      "Bash(cmd //c \"taskkill /F /PID 17416\")",
+      "Bash(%LOCALAPPDATA%/Android/Sdk/emulator/emulator -list-avds)",
+      "Bash(cmd //c \"echo %LOCALAPPDATA%\")",
+      "Bash(\"C:/Users/jayya/AppData/Local/Android/Sdk/emulator/emulator\" -list-avds)",
+      "Bash(./gradlew:*)"
     ]
   }
 }
