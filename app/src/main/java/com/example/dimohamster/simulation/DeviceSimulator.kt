@@ -33,6 +33,7 @@ class DeviceSimulator {
     }
 
     // Simulation state
+    @Volatile
     private var isRunning = false
     private val handler = Handler(Looper.getMainLooper())
 
@@ -134,9 +135,14 @@ class DeviceSimulator {
     // Runnable for simulation updates
     private val simulationRunnable = object : Runnable {
         override fun run() {
+            // Double-check isRunning to handle race condition
+            if (!isRunning) return
+
+            simulationTime += updateIntervalMs / 1000.0
+            updateSimulation()
+
+            // Only post next update if still running
             if (isRunning) {
-                simulationTime += updateIntervalMs / 1000.0
-                updateSimulation()
                 handler.postDelayed(this, updateIntervalMs)
             }
         }
@@ -264,6 +270,8 @@ class DeviceSimulator {
 
         isRunning = false
         handler.removeCallbacks(simulationRunnable)
+        // Remove all callbacks and messages to ensure clean shutdown
+        handler.removeCallbacksAndMessages(null)
         Log.i(TAG, "Simulator stopped")
     }
 

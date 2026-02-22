@@ -326,10 +326,15 @@ class PaperTossView @JvmOverloads constructor(
     private fun stopGameLoop() {
         isRunning = false
         gameThread?.let { thread ->
+            thread.interrupt()
             try {
-                thread.join(1000)
+                thread.join(2000)
+                if (thread.isAlive) {
+                    Log.e(TAG, "Game thread did not terminate within timeout")
+                }
             } catch (e: InterruptedException) {
                 Log.w(TAG, "Game thread join interrupted", e)
+                Thread.currentThread().interrupt()
             }
         }
         gameThread = null
@@ -767,7 +772,7 @@ class PaperTossView @JvmOverloads constructor(
         override fun run() {
             var lastFrameTime = System.currentTimeMillis()
 
-            while (isRunning) {
+            while (isRunning && !isInterrupted) {
                 val currentTime = System.currentTimeMillis()
                 val deltaTime = (currentTime - lastFrameTime).toFloat()
                 lastFrameTime = currentTime
@@ -803,7 +808,8 @@ class PaperTossView @JvmOverloads constructor(
                     try {
                         sleep(sleepTime)
                     } catch (e: InterruptedException) {
-                        // Ignore
+                        // Thread was interrupted, exit the loop
+                        break
                     }
                 }
             }

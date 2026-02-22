@@ -19,7 +19,7 @@ android {
 
         // NDK configuration
         ndk {
-            abiFilters += listOf("arm64-v8a", "x86_64")
+            abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64", "x86")
         }
 
         // CMake arguments
@@ -99,7 +99,8 @@ android {
     // Packaging options
     packaging {
         jniLibs {
-            useLegacyPackaging = false
+            // Use legacy packaging to avoid split APK ABI issues
+            useLegacyPackaging = true
             keepDebugSymbols += "**/*.so"
         }
     }

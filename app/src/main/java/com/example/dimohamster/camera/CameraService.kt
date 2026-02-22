@@ -15,6 +15,7 @@ import androidx.lifecycle.LifecycleOwner
 import java.nio.ByteBuffer
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import com.google.mlkit.vision.face.FaceDetection
 import com.google.mlkit.vision.face.FaceDetectorOptions
 import com.google.mlkit.vision.face.FaceLandmark
@@ -428,7 +429,23 @@ class CameraService(private val context: Context) {
         Log.i(TAG, "Shutting down CameraService")
 
         stopCamera()
+
+        // Close face detector to release ML Kit resources
+        faceDetector.close()
+
+        // Shutdown executor and wait for termination
         cameraExecutor.shutdown()
+        try {
+            if (!cameraExecutor.awaitTermination(500, TimeUnit.MILLISECONDS)) {
+                cameraExecutor.shutdownNow()
+                if (!cameraExecutor.awaitTermination(500, TimeUnit.MILLISECONDS)) {
+                    Log.e(TAG, "Camera executor did not terminate")
+                }
+            }
+        } catch (e: InterruptedException) {
+            cameraExecutor.shutdownNow()
+            Thread.currentThread().interrupt()
+        }
 
         imageAnalyzer = null
         imageCapture = null

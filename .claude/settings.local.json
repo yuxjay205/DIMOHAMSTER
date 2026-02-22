@@ -29,7 +29,16 @@
       "Bash(%LOCALAPPDATA%/Android/Sdk/emulator/emulator -list-avds)",
       "Bash(cmd //c \"echo %LOCALAPPDATA%\")",
       "Bash(\"C:/Users/jayya/AppData/Local/Android/Sdk/emulator/emulator\" -list-avds)",
-      "Bash(./gradlew:*)"
+      "Bash(./gradlew:*)",
+      "Bash(emulator:*)",
+      "Bash($env:LOCALAPPDATAAndroidSdkemulatoremulator.exe -list-avds)",
+      "Bash(cmd /c \"%LOCALAPPDATA%\\\\Android\\\\Sdk\\\\emulator\\\\emulator.exe -list-avds\")",
+      "Bash(cmd /c \"dir %LOCALAPPDATA%\\\\Android\\\\Sdk\\\\emulator\\\\emulator.exe 2>nul && %LOCALAPPDATA%\\\\Android\\\\Sdk\\\\emulator\\\\emulator.exe -list-avds\")",
+      "Bash(cmd /c \"if exist %LOCALAPPDATA%\\\\Android\\\\Sdk\\\\emulator\\\\emulator.exe \\(echo Found emulator\\) else \\(echo Emulator not found\\)\")",
+      "Bash(powershell -Command \"& ''$env:LOCALAPPDATA\\\\Android\\\\Sdk\\\\emulator\\\\emulator.exe'' -list-avds\")",
+      "Bash(powershell -Command \"$emulator = Join-Path $env:LOCALAPPDATA ''Android\\\\Sdk\\\\emulator\\\\emulator.exe''; if \\(Test-Path $emulator\\) { & $emulator -list-avds } else { Write-Host ''Emulator not found at'' $emulator }\")",
+      "Bash(C:/Users/jayya/AppData/Local/Android/Sdk/emulator/emulator.exe -list-avds)",
+      "Bash(C:/Users/jayya/AppData/Local/Android/Sdk/platform-tools/adb.exe devices:*)"
     ]
   }
 }
