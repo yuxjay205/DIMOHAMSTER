@@ -38,6 +38,13 @@ PaperTossGame::PaperTossGame()
     , m_projection(1.0f)
     , m_rng(std::random_device{}())
     , m_windDist(-3.0f, 3.0f)
+    , m_smoothedNosePos(0.0f)
+    , m_noseSmoothingFactor(0.3f)  // Default: heavy smoothing
+    , m_noseDeadZone(5.0f)          // Ignore movements < 5px
+    , m_noseSensitivity(1.0f)       // Default: normal sensitivity
+    , m_trajectoryPointCount(0)
+    , m_trajectoryHitsBin(false)
+    , m_trajectoryPreviewEnabled(true)  // Enabled by default
     , m_initialized(false) {
 }
 
@@ -166,16 +173,20 @@ void PaperTossGame::update(float dt) {
 }
 
 bool PaperTossGame::checkCollision() {
+    return checkCollisionAtPosition(m_ballPos, m_ballVel);
+}
+
+bool PaperTossGame::checkCollisionAtPosition(const glm::vec2& pos, const glm::vec2& vel) {
     // Check if ball center is within bin opening rectangle
     float halfOpening = m_binOpeningWidth * 0.5f;
     float binTop = m_binPos.y + m_binHeight * 0.3f;
     float binBottom = m_binPos.y - m_binHeight * 0.1f;
 
-    return m_ballPos.x > (m_binPos.x - halfOpening) &&
-           m_ballPos.x < (m_binPos.x + halfOpening) &&
-           m_ballPos.y < binTop &&
-           m_ballPos.y > binBottom &&
-           m_ballVel.y < 0.0f; // ball must be falling down
+    return pos.x > (m_binPos.x - halfOpening) &&
+           pos.x < (m_binPos.x + halfOpening) &&
+           pos.y < binTop &&
+           pos.y > binBottom &&
+           vel.y < 0.0f; // ball must be falling down
 }
 
 void PaperTossGame::launchBall(float vx, float vy) {
@@ -183,6 +194,40 @@ void PaperTossGame::launchBall(float vx, float vy) {
     m_ballPos = m_ballStart;
     m_state = GameState::THROWING;
     m_stateTimer = 0.0f;
+}
+
+// Phase 2: Calculate trajectory preview
+void PaperTossGame::calculateTrajectory(const glm::vec2& initialVelocity) {
+    const float dt = 1.0f / 30.0f;  // 30 FPS simulation
+    const float maxTime = 2.0f;     // 2 seconds ahead
+
+    glm::vec2 pos = m_ballStart;
+    glm::vec2 vel = initialVelocity;
+
+    m_trajectoryPointCount = 0;
+    m_trajectoryHitsBin = false;
+
+    for (float t = 0; t < maxTime && m_trajectoryPointCount < MAX_TRAJECTORY_POINTS; t += dt) {
+        // Apply physics (same as update())
+        vel.x += m_wind * 200.0f * dt;
+        vel.y += m_gravity * dt;
+        pos += vel * dt;
+
+        // Store point
+        m_trajectoryPoints[m_trajectoryPointCount++] = pos;
+
+        // Check bin collision
+        if (checkCollisionAtPosition(pos, vel)) {
+            m_trajectoryHitsBin = true;
+            break;
+        }
+
+        // Stop if off-screen
+        if (pos.y < -100 || pos.y > m_screenH + 100 ||
+            pos.x < -100 || pos.x > m_screenW + 100) {
+            break;
+        }
+    }
 }
 
 void PaperTossGame::onTouchDown(float x, float y) {
@@ -197,9 +242,35 @@ void PaperTossGame::onTouchDown(float x, float y) {
 }
 
 void PaperTossGame::onTouchMove(float x, float y) {
-    // Could show aim preview here
-    (void)x;
-    (void)y;
+    if (m_state != GameState::AIMING || !m_trajectoryPreviewEnabled) return;
+
+    // Convert screen coords
+    float gy = (float)m_screenH - y;
+    glm::vec2 touchCurrent(x, gy);
+
+    float elapsed = m_currentTime - m_touchStartTime;
+    if (elapsed < 0.01f) elapsed = 0.01f;
+
+    glm::vec2 delta = touchCurrent - m_touchStart;
+
+    // Only show preview if swiping upward with some force
+    if (delta.y > 10.0f) {
+        float speed = glm::length(delta) / elapsed;
+        speed = glm::clamp(speed, 200.0f, 4000.0f);
+
+        glm::vec2 dir = glm::normalize(delta);
+        glm::vec2 vel = dir * speed;
+
+        // Clamp to same ranges as actual launch
+        vel.y = glm::clamp(vel.y, 600.0f, 2500.0f);
+        vel.x = glm::clamp(vel.x, -800.0f, 800.0f);
+
+        // Phase 2: Calculate trajectory for preview
+        calculateTrajectory(vel);
+    } else {
+        // No valid trajectory
+        m_trajectoryPointCount = 0;
+    }
 }
 
 void PaperTossGame::onTouchUp(float x, float y) {
@@ -254,6 +325,13 @@ void PaperTossGame::render() {
 //    drawBackground();
     drawBin();
     drawWindIndicator();
+
+    // Phase 2 & 3: Draw trajectory and reticle during aiming
+    if (m_state == GameState::AIMING) {
+        drawTrajectory();
+        drawAimingReticle();
+    }
+
     drawPaperBall();
     drawScore();
     if (m_streak >= 3) drawStreakFire();
@@ -616,6 +694,90 @@ void PaperTossGame::drawMessage() {
     }
 }
 
+// Phase 2: Draw trajectory preview
+void PaperTossGame::drawTrajectory() {
+    if (!m_trajectoryPreviewEnabled || m_trajectoryPointCount == 0) return;
+
+    // Choose color: green if hits bin, white otherwise
+    glm::vec4 baseColor = m_trajectoryHitsBin ?
+                          glm::vec4(0.2f, 1.0f, 0.3f, 0.8f) :
+                          glm::vec4(1.0f, 1.0f, 1.0f, 0.7f);
+
+    // Draw small circles at each trajectory point
+    const float circleRadius = 4.0f;
+    for (int i = 0; i < m_trajectoryPointCount; i++) {
+        // Fade alpha along path
+        float t = static_cast<float>(i) / static_cast<float>(m_trajectoryPointCount);
+        float alpha = baseColor.a * (1.0f - t * 0.5f);  // Fade to 50% at end
+
+        glm::vec4 color = baseColor;
+        color.a = alpha;
+
+        // Draw circle as small quad
+        glm::vec2 pos = m_trajectoryPoints[i];
+        drawQuad(pos.x - circleRadius, pos.y - circleRadius,
+                circleRadius * 2.0f, circleRadius * 2.0f, color);
+    }
+}
+
+// Phase 3: Draw aiming reticle
+void PaperTossGame::drawAimingReticle() {
+    if (!m_trajectoryPreviewEnabled || m_trajectoryPointCount == 0) return;
+
+    // Get final trajectory point
+    glm::vec2 targetPos = m_trajectoryPoints[m_trajectoryPointCount - 1];
+
+    // Pulsing scale animation
+    float pulse = 1.0f + 0.2f * sin(m_currentTime * 4.0f);
+
+    // Color matches trajectory
+    glm::vec4 color = m_trajectoryHitsBin ?
+                      glm::vec4(0.2f, 1.0f, 0.3f, 0.9f) :
+                      glm::vec4(1.0f, 1.0f, 1.0f, 0.8f);
+
+    float radius = 15.0f * pulse;
+    float thickness = 3.0f;
+
+    // Draw circle as 4 arcs (approximated with quads)
+    // Top
+    drawQuad(targetPos.x - thickness * 0.5f, targetPos.y + radius - thickness,
+            thickness, thickness, color);
+    // Bottom
+    drawQuad(targetPos.x - thickness * 0.5f, targetPos.y - radius,
+            thickness, thickness, color);
+    // Left
+    drawQuad(targetPos.x - radius, targetPos.y - thickness * 0.5f,
+            thickness, thickness, color);
+    // Right
+    drawQuad(targetPos.x + radius - thickness, targetPos.y - thickness * 0.5f,
+            thickness, thickness, color);
+
+    // Crosshair lines
+    float crosshairLen = 8.0f;
+    // Horizontal
+    drawQuad(targetPos.x - crosshairLen, targetPos.y - 1.0f,
+            crosshairLen * 2.0f, 2.0f, color);
+    // Vertical
+    drawQuad(targetPos.x - 1.0f, targetPos.y - crosshairLen,
+            2.0f, crosshairLen * 2.0f, color);
+}
+
+// Phase 4: Settings setters
+void PaperTossGame::setNoseSmoothingFactor(float factor) {
+    m_noseSmoothingFactor = glm::clamp(factor, 0.0f, 1.0f);
+    LOGI("Nose smoothing factor set to: %.2f", m_noseSmoothingFactor);
+}
+
+void PaperTossGame::setSensitivity(float sensitivity) {
+    m_noseSensitivity = glm::clamp(sensitivity, 0.5f, 1.5f);
+    LOGI("Nose sensitivity set to: %.2f", m_noseSensitivity);
+}
+
+void PaperTossGame::setTrajectoryPreviewEnabled(bool enabled) {
+    m_trajectoryPreviewEnabled = enabled;
+    LOGI("Trajectory preview %s", enabled ? "enabled" : "disabled");
+}
+
 void PaperTossGame::onNoseMoved(float normX, float normY) {
     if (m_state != GameState::READY && m_state != GameState::AIMING)
         return;
@@ -626,21 +788,49 @@ void PaperTossGame::onNoseMoved(float normX, float normY) {
 
     if (m_state == GameState::READY) {
         m_lastNosePos = currentNose;
+        m_smoothedNosePos = currentNose;  // Initialize smoothed position
         m_lastNoseTime = m_currentTime;
         m_state = GameState::AIMING;
         return;
     }
 
     if (m_state == GameState::AIMING) {
+        // Phase 1: Apply exponential moving average smoothing
+        m_smoothedNosePos = m_noseSmoothingFactor * currentNose +
+                           (1.0f - m_noseSmoothingFactor) * m_smoothedNosePos;
+
         float elapsed = m_currentTime - m_lastNoseTime;
         if (elapsed < 0.016f)
             return;
 
-        glm::vec2 delta = currentNose - m_lastNosePos;
+        // Check dead zone - ignore small movements
+        glm::vec2 delta = m_smoothedNosePos - m_lastNosePos;
+        float movementDist = glm::length(delta);
 
+        if (movementDist < m_noseDeadZone) {
+            return;  // Movement too small, ignore
+        }
+
+        // Estimate velocity for trajectory preview (Phase 2)
+        if (m_trajectoryPreviewEnabled && movementDist > 2.0f) {
+            float speed = movementDist / elapsed;
+            speed = glm::clamp(speed * 1.5f * m_noseSensitivity, 200.0f, 4000.0f);
+
+            glm::vec2 dir = glm::normalize(delta);
+            glm::vec2 velocity = dir * speed;
+
+            velocity.y = glm::clamp(velocity.y, 600.0f, 2500.0f);
+            velocity.x = glm::clamp(velocity.x, -800.0f, 800.0f);
+
+            // Calculate trajectory preview
+            calculateTrajectory(velocity);
+        }
+
+        // Check for upward throw gesture
         if (delta.y > 15.0f) {
-            float speed = glm::length(delta) / elapsed;
-            speed = glm::clamp(speed * 2.0f, 200.0f, 4000.0f);
+            float speed = movementDist / elapsed;
+            // Reduced from 2.0x to 1.5x for better control, apply sensitivity
+            speed = glm::clamp(speed * 1.5f * m_noseSensitivity, 200.0f, 4000.0f);
 
             glm::vec2 dir = glm::normalize(delta);
             glm::vec2 velocity = dir * speed;
@@ -650,9 +840,8 @@ void PaperTossGame::onNoseMoved(float normX, float normY) {
 
             launchBall(velocity.x, velocity.y);
         }
-
         else if (elapsed > 0.1f) {
-            m_lastNosePos = currentNose;
+            m_lastNosePos = m_smoothedNosePos;
             m_lastNoseTime = m_currentTime;
         }
     }

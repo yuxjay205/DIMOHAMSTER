@@ -1,5 +1,5 @@
 #include "Renderer.h"
-#include "PaperTossGame.h"
+#include "BreakoutGame.h"
 #include <android/log.h>
 #include <glm/gtc/type_ptr.hpp>
 #include <chrono>
@@ -102,7 +102,7 @@ void Renderer::onSurfaceCreated() {
     setupDefaultShaders();
 
     // Initialize game
-    m_game = std::make_unique<Game::PaperTossGame>();
+    m_game = std::make_unique<Game::BreakoutGame>();
     m_game->init(m_shaderLoader);
 
     m_initialized = true;
@@ -287,6 +287,30 @@ void Renderer::onTouchUp(float x, float y) {
 void Renderer::onNoseDetected(float normX, float normY) {
     if (m_game) {
         m_game->onNoseMoved(normX, normY);
+    }
+}
+
+void Renderer::setNoseSmoothingFactor(float factor) {
+    if (m_game) {
+        m_game->setNoseSmoothingFactor(factor);
+    }
+}
+
+void Renderer::setSensitivity(float sensitivity) {
+    if (m_game) {
+        m_game->setSensitivity(sensitivity);
+    }
+}
+
+void Renderer::setTrajectoryPreviewEnabled(bool enabled) {
+    if (m_game) {
+        m_game->setTrajectoryPreviewEnabled(enabled);
+    }
+}
+
+void Renderer::setShowCameraBackground(bool show) {
+    if (m_game) {
+        m_game->setShowCameraBackground(show);
     }
 }
 

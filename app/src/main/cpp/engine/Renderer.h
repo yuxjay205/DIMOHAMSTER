@@ -10,7 +10,7 @@
 #include "Camera.h"
 #include "ShaderLoader.h"
 
-namespace Game { class PaperTossGame; }
+namespace Game { class BreakoutGame; }
 
 namespace Engine {
 
@@ -71,6 +71,12 @@ public:
 
     void onNoseDetected(float normX, float normY);
 
+    // Game settings
+    void setNoseSmoothingFactor(float factor);
+    void setSensitivity(float sensitivity);
+    void setTrajectoryPreviewEnabled(bool enabled);
+    void setShowCameraBackground(bool show);
+
 private:
     void setupDefaultShaders();
     void renderTestTriangle();
@@ -109,7 +115,7 @@ private:
     GLuint m_cameraTexture;
 
     // Game
-    std::unique_ptr<Game::PaperTossGame> m_game;
+    std::unique_ptr<Game::BreakoutGame> m_game;
 };
 
 } // namespace Engine

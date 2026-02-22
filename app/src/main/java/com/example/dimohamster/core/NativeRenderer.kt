@@ -43,6 +43,12 @@ object NativeRenderer {
     // Sensor data (for simulation support)
     external fun nativeUpdateSensorData(sensorType: Int, x: Float, y: Float, z: Float)
 
+    // Game settings
+    external fun nativeSetNoseSmoothingFactor(factor: Float)
+    external fun nativeSetSensitivity(sensitivity: Float)
+    external fun nativeSetTrajectoryPreviewEnabled(enabled: Boolean)
+    external fun nativeSetShowCameraBackground(show: Boolean)
+
     // Convenience methods
     fun setClearColor(r: Float, g: Float, b: Float, a: Float = 1f) {
         nativeSetClearColor(r, g, b, a)
@@ -95,5 +101,34 @@ object NativeRenderer {
      */
     fun updateSensorData(sensorType: Int, x: Float, y: Float, z: Float) {
         nativeUpdateSensorData(sensorType, x, y, z)
+    }
+
+    /**
+     * Set nose smoothing factor (0.0-1.0)
+     * Lower values = more smoothing, higher values = more responsive
+     */
+    fun setNoseSmoothingFactor(factor: Float) {
+        nativeSetNoseSmoothingFactor(factor)
+    }
+
+    /**
+     * Set nose control sensitivity (0.5-1.5)
+     */
+    fun setSensitivity(sensitivity: Float) {
+        nativeSetSensitivity(sensitivity)
+    }
+
+    /**
+     * Enable or disable trajectory preview
+     */
+    fun setTrajectoryPreviewEnabled(enabled: Boolean) {
+        nativeSetTrajectoryPreviewEnabled(enabled)
+    }
+
+    /**
+     * Show camera background or solid color
+     */
+    fun setShowCameraBackground(show: Boolean) {
+        nativeSetShowCameraBackground(show)
     }
 }

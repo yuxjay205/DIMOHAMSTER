@@ -18,6 +18,7 @@
 // Global instances
 static Engine::Renderer* g_renderer = nullptr;
 static AAssetManager* g_assetManager = nullptr;
+static JavaVM* g_javaVM = nullptr;
 
 #if FMOD_ENABLED
 static Audio::AudioSystem* g_audioSystem = nullptr;
@@ -25,6 +26,40 @@ static Audio::AudioSystem* g_audioSystem = nullptr;
 
 // Frame timing
 static auto g_lastFrameTime = std::chrono::high_resolution_clock::now();
+
+// Helper function to call Java game over callback
+void notifyGameOver(int score, int level) {
+    if (!g_javaVM) {
+        LOGE("JavaVM not initialized");
+        return;
+    }
+
+    JNIEnv* env = nullptr;
+    bool needsDetach = false;
+
+    int getEnvResult = g_javaVM->GetEnv((void**)&env, JNI_VERSION_1_6);
+    if (getEnvResult == JNI_EDETACHED) {
+        if (g_javaVM->AttachCurrentThread(&env, nullptr) != 0) {
+            LOGE("Failed to attach thread");
+            return;
+        }
+        needsDetach = true;
+    }
+
+    jclass listenerClass = env->FindClass("com/example/dimohamster/core/GameEventListener");
+    if (listenerClass) {
+        jmethodID methodID = env->GetStaticMethodID(listenerClass, "onGameOver", "(II)V");
+        if (methodID) {
+            env->CallStaticVoidMethod(listenerClass, methodID, score, level);
+            LOGI("Game over notified: score=%d, level=%d", score, level);
+        }
+        env->DeleteLocalRef(listenerClass);
+    }
+
+    if (needsDetach) {
+        g_javaVM->DetachCurrentThread();
+    }
+}
 
 extern "C" {
 
@@ -379,6 +414,54 @@ Java_com_example_dimohamster_core_NativeRenderer_nativeIsCameraFrameEnabled(
 }
 
 // =============================================================================
+// Game Settings JNI Functions
+// =============================================================================
+
+JNIEXPORT void JNICALL
+Java_com_example_dimohamster_core_NativeRenderer_nativeSetNoseSmoothingFactor(
+        JNIEnv* /* env */,
+        jobject /* this */,
+        jfloat factor) {
+
+    if (g_renderer) {
+        g_renderer->setNoseSmoothingFactor(factor);
+    }
+}
+
+JNIEXPORT void JNICALL
+Java_com_example_dimohamster_core_NativeRenderer_nativeSetSensitivity(
+        JNIEnv* /* env */,
+        jobject /* this */,
+        jfloat sensitivity) {
+
+    if (g_renderer) {
+        g_renderer->setSensitivity(sensitivity);
+    }
+}
+
+JNIEXPORT void JNICALL
+Java_com_example_dimohamster_core_NativeRenderer_nativeSetTrajectoryPreviewEnabled(
+        JNIEnv* /* env */,
+        jobject /* this */,
+        jboolean enabled) {
+
+    if (g_renderer) {
+        g_renderer->setTrajectoryPreviewEnabled(enabled == JNI_TRUE);
+    }
+}
+
+JNIEXPORT void JNICALL
+Java_com_example_dimohamster_core_NativeRenderer_nativeSetShowCameraBackground(
+        JNIEnv* /* env */,
+        jobject /* this */,
+        jboolean show) {
+
+    if (g_renderer) {
+        g_renderer->setShowCameraBackground(show == JNI_TRUE);
+    }
+}
+
+// =============================================================================
 // Audio JNI Functions (only if FMOD is available)
 // =============================================================================
 
@@ -493,4 +576,18 @@ Java_com_example_dimohamster_core_NativeAudio_nativePauseAll(
 
 #endif // FMOD_ENABLED
 
+// JNI library initialization
+JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* /* reserved */) {
+    g_javaVM = vm;
+    LOGI("JNI library loaded, JavaVM captured");
+    return JNI_VERSION_1_6;
+}
+
 } // extern "C"
+
+// External C++ function for game to call
+namespace Game {
+    void reportGameOver(int score, int level) {
+        notifyGameOver(score, level);
+    }
+}

@@ -38,11 +38,24 @@ public:
 
     void onNoseMoved(float normX, float normY);
 
+    // Phase 4: Settings
+    void setNoseSmoothingFactor(float factor);   // 0.0 - 1.0
+    void setSensitivity(float sensitivity);       // 0.5 - 1.5
+    void setTrajectoryPreviewEnabled(bool enabled);
+
 private:
     void resetRound();
     void launchBall(float vx, float vy);
     bool checkCollision();
+    bool checkCollisionAtPosition(const glm::vec2& pos, const glm::vec2& vel);
     void generateWind();
+
+    // Phase 2: Trajectory preview
+    void calculateTrajectory(const glm::vec2& velocity);
+    void drawTrajectory();
+
+    // Phase 3: Aiming reticle
+    void drawAimingReticle();
 
     // Rendering helpers
     void initGL();
@@ -106,6 +119,19 @@ private:
 
     glm::vec2 m_lastNosePos;
     float m_lastNoseTime;
+
+    // Phase 1: Nose smoothing
+    glm::vec2 m_smoothedNosePos;      // Smoothed nose position
+    float m_noseSmoothingFactor;       // Alpha for EMA (0.0-1.0)
+    float m_noseDeadZone;              // Minimum movement threshold in pixels
+    float m_noseSensitivity;           // Sensitivity multiplier (0.5-1.5)
+
+    // Phase 2: Trajectory preview
+    static const int MAX_TRAJECTORY_POINTS = 60;
+    glm::vec2 m_trajectoryPoints[MAX_TRAJECTORY_POINTS];
+    int m_trajectoryPointCount;
+    bool m_trajectoryHitsBin;          // For color coding
+    bool m_trajectoryPreviewEnabled;   // Can be toggled via settings
 
     bool m_initialized;
 };

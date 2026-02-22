@@ -7,8 +7,13 @@ import android.os.Bundle
 import android.util.Log
 import android.view.View
 import android.view.WindowManager
+import android.widget.ImageButton
+import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -19,6 +24,10 @@ import com.example.dimohamster.core.NativeRenderer
 import com.example.dimohamster.sensors.LocationSvc
 import com.example.dimohamster.sensors.SensorBridge
 import com.example.dimohamster.simulation.DeviceSimulator
+import com.example.dimohamster.ui.SettingsOverlay
+import com.example.dimohamster.ui.PlayerNameDialog
+import com.example.dimohamster.database.HighScoreDatabase
+import com.example.dimohamster.core.GameEventListener
 
 class MainActivity : AppCompatActivity(), GameView.OnTouchInputListener {
 
@@ -34,9 +43,15 @@ class MainActivity : AppCompatActivity(), GameView.OnTouchInputListener {
     private lateinit var sensorBridge: SensorBridge
     private lateinit var cameraService: CameraService
     private lateinit var deviceSimulator: DeviceSimulator
+    private lateinit var highScoreDatabase: HighScoreDatabase
 
     // Camera state
     private var isCameraActive = false
+
+    // Dialog states
+    private var showSettingsDialog by mutableStateOf(false)
+    private var showNameDialog by mutableStateOf(false)
+    private var playerName by mutableStateOf("Player")
 
     // Permission launcher for location
     private val locationPermissionLauncher = registerForActivityResult(
@@ -85,8 +100,31 @@ class MainActivity : AppCompatActivity(), GameView.OnTouchInputListener {
 //        setContentView(gameView)
         gameContainer.addView(gameView)
 
+        // Setup settings button
+        val settingsButton = findViewById<ImageButton>(R.id.settingsButton)
+        settingsButton.setOnClickListener {
+            showSettingsDialog = true
+        }
+
+        // Always prompt for player name on launch
+        val prefs = getSharedPreferences("game_prefs", MODE_PRIVATE)
+        playerName = prefs.getString("player_name", "Player") ?: "Player"
+        showNameDialog = true
+
+        // Setup Compose overlays
+        setupComposeOverlays()
+
         // Initialize services
         initializeServices()
+
+        // Initialize high score database
+        highScoreDatabase = HighScoreDatabase(this)
+
+        // Setup game event listener for saving high scores
+        GameEventListener.setOnGameOverListener { score, level ->
+            highScoreDatabase.insertHighScore(score, level, playerName)
+            Log.i(TAG, "High score saved: $playerName - $score points (Level $level)")
+        }
 
         cameraService.setPreviewView(cameraPreviewView)
 
@@ -309,6 +347,49 @@ class MainActivity : AppCompatActivity(), GameView.OnTouchInputListener {
      * Get the camera service for direct control
      */
     fun getCameraService(): CameraService = cameraService
+
+    /**
+     * Setup Compose overlays for dialogs
+     */
+    private fun setupComposeOverlays() {
+        val composeView = androidx.compose.ui.platform.ComposeView(this)
+        composeView.setContent {
+            // Player name dialog (first launch)
+            if (showNameDialog) {
+                PlayerNameDialog(
+                    onNameEntered = { name ->
+                        playerName = name
+                        showNameDialog = false
+
+                        // Save to preferences
+                        val prefs = getSharedPreferences("game_prefs", MODE_PRIVATE)
+                        prefs.edit().apply {
+                            putString("player_name", name)
+                            apply()
+                        }
+
+                        Log.i(TAG, "Player name set to: $name")
+                    }
+                )
+            }
+
+            // Settings dialog
+            if (showSettingsDialog) {
+                SettingsOverlay(
+                    onDismiss = { showSettingsDialog = false }
+                )
+            }
+        }
+
+        // Add compose view to game container
+        val gameContainer = findViewById<android.widget.FrameLayout>(R.id.gameContainer)
+        gameContainer.addView(composeView)
+    }
+
+    /**
+     * Get the current player name
+     */
+    fun getCurrentPlayerName(): String = playerName
 
     private fun requestPermissions() {
         val permissionsToRequest = mutableListOf<String>()

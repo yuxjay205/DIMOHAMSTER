@@ -67,11 +67,11 @@ set(ENGINE_HEADERS
 # Game Source Files
 # =============================================================================
 set(GAME_SOURCES
-    game/PaperTossGame.cpp
+    game/BreakoutGame.cpp
 )
 
 set(GAME_HEADERS
-    game/PaperTossGame.h
+    game/BreakoutGame.h
 )
 
 # =============================================================================
