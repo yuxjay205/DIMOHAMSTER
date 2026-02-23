@@ -32,7 +32,7 @@ val pressStart2P = FontFamily(
     Font(R.font.press_start_2p, FontWeight.Normal)
 )
 
-val blueBackground  = Color(red = 15, green= 31, blue = 48)
+val blueBackground  = Color(red = 15, green= 53, blue = 94)
 
 val btnColour = Color(red = 126, green= 126, blue = 126)
 
