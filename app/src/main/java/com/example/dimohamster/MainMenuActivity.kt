@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import com.example.dimohamster.audio.BackgroundMusicManager
 import com.example.dimohamster.ui.LeaderboardDialog
 import com.example.dimohamster.ui.theme.DIMOHAMSTERTheme
 
@@ -37,6 +38,9 @@ class MainMenuActivity : ComponentActivity() {
         // Keep screen on
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
+        // Start background music
+        BackgroundMusicManager.start(this)
+
         setContent {
             DIMOHAMSTERTheme {
                 MainMenuScreen(
@@ -49,6 +53,16 @@ class MainMenuActivity : ComponentActivity() {
                 )
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        BackgroundMusicManager.resume()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        BackgroundMusicManager.pause()
     }
 
     private fun setupFullscreen() {
@@ -243,7 +257,7 @@ private fun HowToPlayDialog(
 
                 InstructionItem("1", "Move your nose left and right to control the paddle")
                 Spacer(modifier = Modifier.height(12.dp))
-                InstructionItem("2", "Tap the screen to launch the ball")
+                InstructionItem("2", "Open your mouth or tap the screen to launch the ball")
                 Spacer(modifier = Modifier.height(12.dp))
                 InstructionItem("3", "Break all the bricks to advance to the next level")
                 Spacer(modifier = Modifier.height(12.dp))
@@ -265,6 +279,27 @@ private fun HowToPlayDialog(
                 PowerUpItem(Color(0xFF4CAF50), "Slow Ball", "Slows down the ball")
                 Spacer(modifier = Modifier.height(8.dp))
                 PowerUpItem(Color(0xFFF44336), "Extra Life", "Gain an extra life")
+                Spacer(modifier = Modifier.height(8.dp))
+                PowerUpItem(Color(0xFFFFAB00), "Big Ball", "Doubles the ball size")
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Pity system info
+                Text(
+                    text = "Tip",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = "The fewer lives you have, the more power-ups will drop!",
+                    fontSize = 13.sp,
+                    color = Color(0xFFB0B0B0),
+                    textAlign = TextAlign.Center
+                )
 
                 Spacer(modifier = Modifier.height(24.dp))
 

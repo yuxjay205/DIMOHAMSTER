@@ -32,6 +32,7 @@ object NativeRenderer {
     // Device camera frame processing
     external fun nativeUpdateCameraFrame(width: Int, height: Int, data: ByteArray, timestamp: Long)
     external fun nativeOnNoseDetected(normX: Float, normY: Float)
+    external fun nativeOnMouthOpened()
     external fun nativeSetCameraFrameEnabled(enabled: Boolean)
     external fun nativeIsCameraFrameEnabled(): Boolean
 
@@ -80,6 +81,13 @@ object NativeRenderer {
 
     fun onNoseDetected(normX: Float, normY: Float) {
         nativeOnNoseDetected(normX, normY)
+    }
+
+    /**
+     * Called when mouth open is detected - used to launch the ball
+     */
+    fun onMouthOpened() {
+        nativeOnMouthOpened()
     }
 
     /**

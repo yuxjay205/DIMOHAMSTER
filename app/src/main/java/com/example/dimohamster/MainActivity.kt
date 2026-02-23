@@ -30,6 +30,7 @@ import com.example.dimohamster.sensors.LocationSvc
 import com.example.dimohamster.sensors.SensorBridge
 import com.example.dimohamster.simulation.DeviceSimulator
 import android.content.Intent
+import com.example.dimohamster.audio.BackgroundMusicManager
 import com.example.dimohamster.ui.SettingsOverlay
 import com.example.dimohamster.ui.PlayerNameDialog
 import com.example.dimohamster.database.HighScoreDatabase
@@ -165,6 +166,9 @@ class MainActivity : AppCompatActivity(), GameView.OnTouchInputListener {
 
         cameraService.setPreviewView(cameraPreviewView)
 
+        // Start background music (in case coming from external launch)
+        BackgroundMusicManager.start(this)
+
         // Request permissions
         requestPermissions()
 
@@ -232,6 +236,10 @@ class MainActivity : AppCompatActivity(), GameView.OnTouchInputListener {
 
             override fun onNoseDetected(normX: Float, normY: Float) {
                 NativeRenderer.onNoseDetected(normX, normY)
+            }
+
+            override fun onMouthOpened() {
+                NativeRenderer.onMouthOpened()
             }
 
             override fun onPhotoCaptured(bitmap: Bitmap?) {
@@ -461,6 +469,9 @@ class MainActivity : AppCompatActivity(), GameView.OnTouchInputListener {
         super.onResume()
         gameView.onResume()
 
+        // Resume background music
+        BackgroundMusicManager.resume()
+
         if (USE_SIMULATION) {
             deviceSimulator.start()
         } else {
@@ -479,6 +490,9 @@ class MainActivity : AppCompatActivity(), GameView.OnTouchInputListener {
     override fun onPause() {
         super.onPause()
         gameView.onPause()
+
+        // Pause background music
+        BackgroundMusicManager.pause()
 
         if (USE_SIMULATION) {
             deviceSimulator.stop()

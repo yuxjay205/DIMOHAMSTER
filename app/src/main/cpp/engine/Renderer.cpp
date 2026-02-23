@@ -294,6 +294,12 @@ void Renderer::onNoseDetected(float normX, float normY) {
     }
 }
 
+void Renderer::onMouthOpened() {
+    if (m_game) {
+        m_game->onMouthOpened();
+    }
+}
+
 void Renderer::setNoseSmoothingFactor(float factor) {
     if (m_game) {
         m_game->setNoseSmoothingFactor(factor);

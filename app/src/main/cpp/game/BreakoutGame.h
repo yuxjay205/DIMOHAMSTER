@@ -66,6 +66,7 @@ public:
     void onTouchMove(float x, float y);
     void onTouchUp(float x, float y);
     void onNoseMoved(float normX, float normY);
+    void onMouthOpened();
 
     // Settings
     void setNoseSmoothingFactor(float factor);

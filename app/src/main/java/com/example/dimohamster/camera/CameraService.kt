@@ -18,6 +18,7 @@ import java.util.concurrent.Executors
 import com.google.mlkit.vision.face.FaceDetection
 import com.google.mlkit.vision.face.FaceDetectorOptions
 import com.google.mlkit.vision.face.FaceLandmark
+import com.google.mlkit.vision.face.FaceContour
 import com.google.mlkit.vision.common.InputImage
 
 /**
@@ -57,7 +58,12 @@ class CameraService(private val context: Context) {
     private val faceDetectorOptions = FaceDetectorOptions.Builder()
         .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_FAST)
         .setLandmarkMode(FaceDetectorOptions.LANDMARK_MODE_ALL)
+        .setContourMode(FaceDetectorOptions.CONTOUR_MODE_ALL)
         .build()
+
+    // Mouth open detection state
+    private var wasMouthOpen = false
+    private val MOUTH_OPEN_THRESHOLD = 15f  // Pixels threshold for mouth open detection
 
     private val faceDetector = FaceDetection.getClient(faceDetectorOptions)
 
@@ -75,6 +81,11 @@ class CameraService(private val context: Context) {
         fun onFrameAvailable(width: Int, height: Int, data: ByteArray, timestamp: Long)
 
         fun onNoseDetected(normX: Float, normY: Float)
+
+        /**
+         * Called when mouth open is detected (transition from closed to open)
+         */
+        fun onMouthOpened()
 
         /**
          * Called when a photo is captured
@@ -232,6 +243,34 @@ class CameraService(private val context: Context) {
                             }
 
                             frameListener?.onNoseDetected(normX, normY)
+                        }
+
+                        // Detect mouth open using lip contours
+                        val upperLipBottom = face.getContour(FaceContour.UPPER_LIP_BOTTOM)
+                        val lowerLipTop = face.getContour(FaceContour.LOWER_LIP_TOP)
+
+                        if (upperLipBottom != null && lowerLipTop != null) {
+                            val upperLipPoints = upperLipBottom.points
+                            val lowerLipPoints = lowerLipTop.points
+
+                            if (upperLipPoints.isNotEmpty() && lowerLipPoints.isNotEmpty()) {
+                                // Get center points of each lip
+                                val upperCenter = upperLipPoints[upperLipPoints.size / 2]
+                                val lowerCenter = lowerLipPoints[lowerLipPoints.size / 2]
+
+                                // Calculate vertical distance between lips
+                                val lipDistance = Math.abs(lowerCenter.y - upperCenter.y)
+
+                                val isMouthOpen = lipDistance > MOUTH_OPEN_THRESHOLD
+
+                                // Detect transition from closed to open
+                                if (isMouthOpen && !wasMouthOpen) {
+                                    frameListener?.onMouthOpened()
+                                    Log.d(TAG, "Mouth opened! Distance: $lipDistance")
+                                }
+
+                                wasMouthOpen = isMouthOpen
+                            }
                         }
                     }
                 }.addOnCompleteListener {

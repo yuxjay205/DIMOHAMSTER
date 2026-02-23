@@ -603,6 +603,17 @@ void BreakoutGame::onTouchUp(float x, float y) {
     // Not used for Breakout
 }
 
+void BreakoutGame::onMouthOpened() {
+    // Launch ball when mouth opens (if in ready state)
+    if (m_state == GameState::READY && !m_ballLaunched) {
+        float angle = 45.0f * (3.14159f / 180.0f);
+        m_ballVel = glm::vec2(sin(angle) * m_ballSpeed, cos(angle) * m_ballSpeed);
+        m_ballLaunched = true;
+        m_state = GameState::PLAYING;
+        LOGI("Ball launched with mouth open!");
+    }
+}
+
 void BreakoutGame::onNoseMoved(float normX, float normY) {
     // Update nose detection status
     m_noseDetected = true;

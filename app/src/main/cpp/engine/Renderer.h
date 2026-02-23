@@ -70,6 +70,7 @@ public:
     void onTouchUp(float x, float y);
 
     void onNoseDetected(float normX, float normY);
+    void onMouthOpened();
 
     // Game settings
     void setNoseSmoothingFactor(float factor);
