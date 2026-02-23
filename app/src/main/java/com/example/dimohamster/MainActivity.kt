@@ -32,7 +32,6 @@ import com.example.dimohamster.simulation.DeviceSimulator
 import android.content.Intent
 import com.example.dimohamster.audio.BackgroundMusicManager
 import com.example.dimohamster.ui.SettingsOverlay
-import com.example.dimohamster.ui.PlayerNameDialog
 import com.example.dimohamster.database.HighScoreDatabase
 import com.example.dimohamster.core.GameEventListener
 
@@ -58,7 +57,6 @@ class MainActivity : AppCompatActivity(), GameView.OnTouchInputListener {
 
     // Dialog states
     private var showSettingsDialog by mutableStateOf(false)
-    private var showNameDialog by mutableStateOf(false)
     private var playerName by mutableStateOf("Player")
 
     // Permission launcher for location
@@ -114,10 +112,10 @@ class MainActivity : AppCompatActivity(), GameView.OnTouchInputListener {
             showSettingsDialog = true
         }
 
-        // Load saved player name and show name dialog
-        val prefs = getSharedPreferences("game_prefs", MODE_PRIVATE)
-        playerName = prefs.getString("player_name", "Player") ?: "Player"
-        showNameDialog = true
+        // Get player name from intent or saved preferences
+        playerName = intent.getStringExtra("player_name")
+            ?: getSharedPreferences("game_prefs", MODE_PRIVATE).getString("player_name", "Player")
+            ?: "Player"
 
         // Setup Compose overlays
         setupComposeOverlays()
@@ -399,26 +397,6 @@ class MainActivity : AppCompatActivity(), GameView.OnTouchInputListener {
     private fun setupComposeOverlays() {
         val composeView = androidx.compose.ui.platform.ComposeView(this)
         composeView.setContent {
-            // Player name dialog (shown on game start)
-            if (showNameDialog) {
-                PlayerNameDialog(
-                    onNameEntered = { name ->
-                        playerName = name
-                        showNameDialog = false
-                        // Game starts now
-
-                        // Save to preferences
-                        val prefs = getSharedPreferences("game_prefs", MODE_PRIVATE)
-                        prefs.edit().apply {
-                            putString("player_name", name)
-                            apply()
-                        }
-
-                        Log.i(TAG, "Player name set to: $name, starting game...")
-                    }
-                )
-            }
-
             // Settings dialog
             if (showSettingsDialog) {
                 SettingsOverlay(

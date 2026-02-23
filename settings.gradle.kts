@@ -19,6 +19,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "DIMOHAMSTER"
+rootProject.name = "SUPERBALL"
 include(":app")
  

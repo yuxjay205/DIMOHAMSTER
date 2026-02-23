@@ -167,19 +167,25 @@ void BreakoutGame::generateBricks() {
     m_bricks.clear();
     m_bricksRemaining = 0;
 
+    // Game boundary - bricks should be in the middle of play area
+    float topMargin = 120.0f;
+    float uiBarHeight = 100.0f;
+    float gameCeiling = m_screenH - topMargin - uiBarHeight;
+
     float brickWidth = (float)m_screenW / BRICKS_PER_ROW;
     float brickHeight = 25.0f;
-    float startY = m_screenH * 0.65f;
+    // Position bricks in upper-middle of play area (around 60-65% height)
+    float startY = gameCeiling * 0.65f;
     float padding = 2.0f;
 
-    // Rainbow colors for rows
+    // Retro muted color palette for rows
     glm::vec4 rowColors[BRICK_ROWS] = {
-        glm::vec4(1.0f, 0.2f, 0.2f, 1.0f),  // Red
-        glm::vec4(1.0f, 0.6f, 0.2f, 1.0f),  // Orange
-        glm::vec4(1.0f, 1.0f, 0.2f, 1.0f),  // Yellow
-        glm::vec4(0.2f, 1.0f, 0.2f, 1.0f),  // Green
-        glm::vec4(0.2f, 0.6f, 1.0f, 1.0f),  // Blue
-        glm::vec4(0.6f, 0.2f, 1.0f, 1.0f)   // Purple
+        glm::vec4(0.90f, 0.35f, 0.25f, 1.0f),  // Terracotta red
+        glm::vec4(0.91f, 0.55f, 0.20f, 1.0f),  // Burnt orange
+        glm::vec4(0.92f, 0.78f, 0.35f, 1.0f),  // Mustard yellow
+        glm::vec4(0.45f, 0.72f, 0.55f, 1.0f),  // Sage green
+        glm::vec4(0.40f, 0.60f, 0.75f, 1.0f),  // Dusty blue
+        glm::vec4(0.60f, 0.45f, 0.65f, 1.0f)   // Muted purple
     };
 
     // Determine number of rows based on level
@@ -283,6 +289,11 @@ void BreakoutGame::update(float dt) {
 void BreakoutGame::updatePhysics(float dt) {
     float currentRadius = m_ballRadius * m_ballRadiusMultiplier;
 
+    // Game boundary - ball bounces off bottom of UI bar
+    float topMargin = 120.0f;
+    float uiBarHeight = 100.0f;
+    float gameCeiling = m_screenH - topMargin - uiBarHeight;
+
     if (!m_ballLaunched) {
         // Ball follows paddle
         m_ballPos.x = m_paddlePos.x;
@@ -302,8 +313,9 @@ void BreakoutGame::updatePhysics(float dt) {
             m_ballVel.x = -m_ballVel.x;
             m_screenShake = 5.0f;
         }
-        if (m_ballPos.y + currentRadius > m_screenH) {
-            m_ballPos.y = m_screenH - currentRadius;
+        // Top boundary - bounce off bottom of UI bar
+        if (m_ballPos.y + currentRadius > gameCeiling) {
+            m_ballPos.y = gameCeiling - currentRadius;
             m_ballVel.y = -m_ballVel.y;
             m_screenShake = 5.0f;
         }
@@ -446,23 +458,24 @@ void BreakoutGame::spawnPowerUp(const glm::vec2& pos) {
     powerUp.position = pos;
 
     // Random power-up type (now includes BIG_BALL)
+    // Retro muted color palette for power-ups
     int type = rand() % 4;
     switch (type) {
         case 0:
             powerUp.type = PowerUpType::WIDE_PADDLE;
-            powerUp.color = glm::vec4(0.3f, 0.7f, 1.0f, 1.0f);  // Blue
+            powerUp.color = glm::vec4(0.35f, 0.65f, 0.80f, 1.0f);  // Dusty blue
             break;
         case 1:
             powerUp.type = PowerUpType::SLOW_BALL;
-            powerUp.color = glm::vec4(0.3f, 1.0f, 0.7f, 1.0f);  // Green
+            powerUp.color = glm::vec4(0.45f, 0.72f, 0.55f, 1.0f);  // Sage green
             break;
         case 2:
             powerUp.type = PowerUpType::EXTRA_LIFE;
-            powerUp.color = glm::vec4(1.0f, 0.3f, 0.3f, 1.0f);  // Red
+            powerUp.color = glm::vec4(0.90f, 0.35f, 0.30f, 1.0f);  // Terracotta red
             break;
         case 3:
             powerUp.type = PowerUpType::BIG_BALL;
-            powerUp.color = glm::vec4(1.0f, 0.8f, 0.2f, 1.0f);  // Orange/Gold
+            powerUp.color = glm::vec4(0.92f, 0.70f, 0.25f, 1.0f);  // Warm gold
             break;
     }
 
@@ -552,14 +565,24 @@ void BreakoutGame::onTouchDown(float x, float y) {
     float gy = (float)m_screenH - y;
 
     if (m_state == GameState::GAME_OVER) {
-        // Button dimensions (must match drawUI)
+        // Button dimensions (must match drawUI - retro style)
         float cx = m_screenW * 0.5f;
         float cy = m_screenH * 0.5f;
-        float buttonW = 220.0f;
+
+        // Calculate positions matching drawUI retro layout
+        float containerH = 360.0f;
+        float containerY = cy - containerH * 0.5f;
+        float padding = 20.0f;
+        float displayH = 60.0f;
+        float displayY = containerY + containerH - padding - displayH - 10;
+        float scoreDisplayH = 80.0f;
+        float scoreDisplayY = displayY - scoreDisplayH - 15;
+
+        float buttonW = 200.0f;
         float buttonH = 50.0f;
         float buttonX = cx - buttonW * 0.5f;
-        float restartButtonY = cy - 40;
-        float menuButtonY = restartButtonY - buttonH - 15;
+        float restartButtonY = scoreDisplayY - buttonH - 20;
+        float menuButtonY = restartButtonY - buttonH - 12;
 
         // Check if restart button was tapped
         if (x >= buttonX && x <= buttonX + buttonW &&
@@ -697,8 +720,19 @@ void BreakoutGame::render() {
 
     // Draw background based on setting
     if (!m_showCameraBackground) {
-        // Draw solid dark background
-        drawQuad(0, 0, m_screenW, m_screenH, glm::vec4(0.05f, 0.05f, 0.1f, 1.0f));
+        // Retro cream background with gradient
+        glm::vec4 bgTop(0.96f, 0.94f, 0.91f, 1.0f);     // CreamBackground
+        glm::vec4 bgBottom(0.88f, 0.85f, 0.80f, 1.0f);  // Darker cream
+
+        // Draw gradient background (bottom half darker)
+        drawQuad(0, 0, m_screenW, m_screenH * 0.5f, bgBottom);
+        drawQuad(0, m_screenH * 0.5f, m_screenW, m_screenH * 0.5f, bgTop);
+
+        // Subtle border/frame effect
+        float borderW = 8.0f;
+        glm::vec4 borderColor(0.82f, 0.78f, 0.72f, 1.0f);
+        drawQuad(0, 0, borderW, m_screenH, borderColor);  // Left
+        drawQuad(m_screenW - borderW, 0, borderW, m_screenH, borderColor);  // Right
     }
     // Otherwise camera shows through transparent background
 
@@ -764,67 +798,119 @@ void BreakoutGame::drawPaddle() {
     float x = m_paddlePos.x - width * 0.5f;
     float y = m_paddlePos.y;
 
-    // Shadow
-    drawQuad(x + 2, y - 4, width, m_paddleSize.y,
-            glm::vec4(0.0f, 0.0f, 0.0f, 0.3f));
+    // Retro paddle colors
+    glm::vec4 paddleMain(0.91f, 0.36f, 0.02f, 1.0f);      // AccentOrange
+    glm::vec4 paddleLight(1.0f, 0.48f, 0.15f, 1.0f);      // Lighter orange
+    glm::vec4 paddleDark(0.72f, 0.28f, 0.0f, 1.0f);       // Darker orange
 
-    // Main paddle - gradient effect
-    glm::vec4 paddleColor = (m_paddleWidthMultiplier > 1.0f) ?
-        glm::vec4(0.5f, 0.9f, 1.0f, 1.0f) :  // Brighter when powered up
-        glm::vec4(0.3f, 0.7f, 1.0f, 1.0f);
+    if (m_paddleWidthMultiplier > 1.0f) {
+        // Powered up - cyan/teal color
+        paddleMain = glm::vec4(0.2f, 0.75f, 0.8f, 1.0f);
+        paddleLight = glm::vec4(0.3f, 0.88f, 0.92f, 1.0f);
+        paddleDark = glm::vec4(0.15f, 0.55f, 0.6f, 1.0f);
+    }
 
-    drawQuad(x, y, width, m_paddleSize.y * 0.5f, paddleColor);
-    drawQuad(x, y + m_paddleSize.y * 0.5f, width, m_paddleSize.y * 0.5f,
-            paddleColor * 0.8f);
+    // Shadow (softer, offset down-right)
+    drawQuad(x + 3, y - 5, width, m_paddleSize.y,
+            glm::vec4(0.0f, 0.0f, 0.0f, 0.25f));
 
-    // Highlight
-    drawQuad(x + 5, y + m_paddleSize.y - 3, width - 10, 2,
-            glm::vec4(1.0f, 1.0f, 1.0f, 0.4f));
+    // Main paddle body - 3D effect with gradient
+    drawQuad(x, y, width, m_paddleSize.y * 0.4f, paddleDark);           // Bottom darker
+    drawQuad(x, y + m_paddleSize.y * 0.4f, width, m_paddleSize.y * 0.35f, paddleMain);  // Middle
+    drawQuad(x, y + m_paddleSize.y * 0.75f, width, m_paddleSize.y * 0.25f, paddleLight); // Top lighter
+
+    // Top highlight (glossy effect)
+    drawQuad(x + 8, y + m_paddleSize.y - 4, width - 16, 3,
+            glm::vec4(1.0f, 1.0f, 1.0f, 0.5f));
+
+    // Edge accents (rounded look simulation)
+    float edgeW = 6.0f;
+    drawQuad(x, y, edgeW, m_paddleSize.y, paddleDark);  // Left edge darker
+    drawQuad(x + width - edgeW, y, edgeW, m_paddleSize.y, paddleDark);  // Right edge darker
 }
 
 void BreakoutGame::drawBall() {
     float currentRadius = m_ballRadius * m_ballRadiusMultiplier;
 
-    // Glow effect (bigger glow for big ball)
-    float glowSize = (m_ballRadiusMultiplier > 1.0f) ? 6.0f : 4.0f;
-    drawCircle(m_ballPos.x, m_ballPos.y, currentRadius + glowSize,
-              glm::vec4(1.0f, 1.0f, 1.0f, 0.2f));
+    // Retro ball colors - cream/warm white with shadow
+    glm::vec4 ballMain(0.98f, 0.95f, 0.88f, 1.0f);      // Warm cream
+    glm::vec4 ballShadow(0.75f, 0.70f, 0.60f, 1.0f);    // Darker cream for depth
+    glm::vec4 ballHighlight(1.0f, 1.0f, 1.0f, 0.8f);    // White highlight
 
-    // Main ball - orange tint when big
-    glm::vec4 ballColor = (m_ballRadiusMultiplier > 1.0f) ?
-        glm::vec4(1.0f, 0.7f, 0.2f, 1.0f) :  // Orange when powered up
-        glm::vec4(1.0f, 0.9f, 0.3f, 1.0f);   // Normal yellow
-    drawCircle(m_ballPos.x, m_ballPos.y, currentRadius, ballColor);
+    if (m_ballRadiusMultiplier > 1.0f) {
+        // Big ball power-up - golden/orange tint
+        ballMain = glm::vec4(1.0f, 0.85f, 0.4f, 1.0f);
+        ballShadow = glm::vec4(0.85f, 0.55f, 0.15f, 1.0f);
+    }
 
-    // Highlight
+    // Shadow underneath ball (offset)
+    drawCircle(m_ballPos.x + 2, m_ballPos.y - 3, currentRadius,
+              glm::vec4(0.0f, 0.0f, 0.0f, 0.2f));
+
+    // Outer ring (darker edge for 3D effect)
+    drawCircle(m_ballPos.x, m_ballPos.y, currentRadius, ballShadow);
+
+    // Main ball (slightly smaller for edge effect)
+    drawCircle(m_ballPos.x, m_ballPos.y, currentRadius * 0.85f, ballMain);
+
+    // Glossy highlight (top-left)
     float highlightOffset = currentRadius * 0.25f;
     drawCircle(m_ballPos.x - highlightOffset, m_ballPos.y + highlightOffset,
-              currentRadius * 0.4f, glm::vec4(1.0f, 1.0f, 1.0f, 0.6f));
+              currentRadius * 0.35f, ballHighlight);
+
+    // Small specular highlight
+    drawCircle(m_ballPos.x - highlightOffset * 0.6f, m_ballPos.y + highlightOffset * 0.6f,
+              currentRadius * 0.15f, glm::vec4(1.0f, 1.0f, 1.0f, 0.9f));
 }
 
 void BreakoutGame::drawBricks() {
     for (const auto& brick : m_bricks) {
         if (!brick.active) continue;
 
-        // Shadow
-        drawQuad(brick.position.x + 2, brick.position.y - 2,
+        // Calculate darker and lighter versions of brick color for 3D effect
+        glm::vec4 brickDark = brick.color * 0.7f;
+        brickDark.a = 1.0f;
+        glm::vec4 brickLight = glm::vec4(
+            glm::min(brick.color.r * 1.2f, 1.0f),
+            glm::min(brick.color.g * 1.2f, 1.0f),
+            glm::min(brick.color.b * 1.2f, 1.0f),
+            1.0f
+        );
+
+        // Drop shadow
+        drawQuad(brick.position.x + 3, brick.position.y - 3,
                 brick.size.x, brick.size.y,
                 glm::vec4(0.0f, 0.0f, 0.0f, 0.2f));
 
-        // Main brick
+        // Main brick body
         drawQuad(brick.position.x, brick.position.y,
                 brick.size.x, brick.size.y, brick.color);
 
-        // Highlight
-        drawQuad(brick.position.x + 2, brick.position.y + brick.size.y - 4,
-                brick.size.x - 4, 2,
-                glm::vec4(1.0f, 1.0f, 1.0f, 0.3f));
+        // Top highlight (lighter strip)
+        drawQuad(brick.position.x + 2, brick.position.y + brick.size.y - 5,
+                brick.size.x - 4, 4, brickLight);
 
-        // Health indicator
+        // Bottom edge (darker strip)
+        drawQuad(brick.position.x + 2, brick.position.y + 1,
+                brick.size.x - 4, 3, brickDark);
+
+        // Left edge highlight
+        drawQuad(brick.position.x + 1, brick.position.y + 2,
+                2, brick.size.y - 4,
+                glm::vec4(1.0f, 1.0f, 1.0f, 0.15f));
+
+        // Right edge shadow
+        drawQuad(brick.position.x + brick.size.x - 3, brick.position.y + 2,
+                2, brick.size.y - 4, brickDark);
+
+        // Health indicator (retro style - small inset circle)
         if (brick.health > 1) {
             float cx = brick.position.x + brick.size.x * 0.5f;
             float cy = brick.position.y + brick.size.y * 0.5f;
-            drawCircle(cx, cy, 3, glm::vec4(1.0f, 1.0f, 1.0f, 0.8f));
+            // Dark inset
+            drawCircle(cx, cy, 5, glm::vec4(0.0f, 0.0f, 0.0f, 0.3f));
+            // Inner bright circle
+            drawCircle(cx, cy, 3, glm::vec4(1.0f, 1.0f, 1.0f, 0.9f));
         }
     }
 }
@@ -832,9 +918,24 @@ void BreakoutGame::drawBricks() {
 void BreakoutGame::drawParticles() {
     for (const auto& p : m_particles) {
         float alpha = p.life / p.maxLife;
-        glm::vec4 color = p.color;
-        color.a = alpha;
-        drawQuad(p.pos.x - 3, p.pos.y - 3, 6, 6, color);
+        float size = 6.0f * (0.5f + alpha * 0.5f);  // Shrink as they fade
+
+        // Particle with slight 3D effect
+        glm::vec4 colorDark = p.color * 0.6f;
+        colorDark.a = alpha * 0.8f;
+        glm::vec4 colorMain = p.color;
+        colorMain.a = alpha;
+
+        // Shadow
+        drawQuad(p.pos.x - size * 0.5f + 1, p.pos.y - size * 0.5f - 1,
+                size, size, glm::vec4(0.0f, 0.0f, 0.0f, alpha * 0.3f));
+
+        // Main particle
+        drawQuad(p.pos.x - size * 0.5f, p.pos.y - size * 0.5f, size, size, colorMain);
+
+        // Highlight
+        drawQuad(p.pos.x - size * 0.5f + 1, p.pos.y + size * 0.25f,
+                size - 2, size * 0.2f, glm::vec4(1.0f, 1.0f, 1.0f, alpha * 0.4f));
     }
 }
 
@@ -844,50 +945,88 @@ void BreakoutGame::drawPowerUps() {
 
         float halfSize = powerUp.size * 0.5f;
 
-        // Glow effect
-        drawQuad(powerUp.position.x - halfSize - 3, powerUp.position.y - halfSize - 3,
-                powerUp.size + 6, powerUp.size + 6,
-                glm::vec4(powerUp.color.r, powerUp.color.g, powerUp.color.b, 0.3f));
+        // Calculate darker and lighter versions for 3D effect
+        glm::vec4 colorDark = powerUp.color * 0.7f;
+        colorDark.a = 1.0f;
+        glm::vec4 colorLight = glm::vec4(
+            glm::min(powerUp.color.r * 1.25f, 1.0f),
+            glm::min(powerUp.color.g * 1.25f, 1.0f),
+            glm::min(powerUp.color.b * 1.25f, 1.0f),
+            1.0f
+        );
 
-        // Main power-up box
+        // Drop shadow
+        drawQuad(powerUp.position.x - halfSize + 3, powerUp.position.y - halfSize - 3,
+                powerUp.size, powerUp.size,
+                glm::vec4(0.0f, 0.0f, 0.0f, 0.25f));
+
+        // Main power-up box (3D effect)
         drawQuad(powerUp.position.x - halfSize, powerUp.position.y - halfSize,
-                powerUp.size, powerUp.size, powerUp.color);
+                powerUp.size, powerUp.size * 0.5f, colorDark);
+        drawQuad(powerUp.position.x - halfSize, powerUp.position.y,
+                powerUp.size, powerUp.size * 0.5f, powerUp.color);
 
-        // Icon indicator - simple shapes for each type
+        // Top highlight
+        drawQuad(powerUp.position.x - halfSize + 3, powerUp.position.y + halfSize - 4,
+                powerUp.size - 6, 3, colorLight);
+
+        // Border for definition
+        float borderW = 2.0f;
+        drawQuad(powerUp.position.x - halfSize, powerUp.position.y - halfSize,
+                powerUp.size, borderW, colorDark);  // Bottom
+        drawQuad(powerUp.position.x - halfSize, powerUp.position.y + halfSize - borderW,
+                powerUp.size, borderW, colorLight);  // Top
+        drawQuad(powerUp.position.x - halfSize, powerUp.position.y - halfSize,
+                borderW, powerUp.size, colorDark);  // Left
+        drawQuad(powerUp.position.x + halfSize - borderW, powerUp.position.y - halfSize,
+                borderW, powerUp.size, colorDark);  // Right
+
+        // Icon indicator - retro style with cream/white icons
         float iconSize = 8.0f;
-        glm::vec4 iconColor(1.0f, 1.0f, 1.0f, 0.9f);
+        glm::vec4 iconColor(0.98f, 0.96f, 0.92f, 0.95f);  // Cream white
 
         switch (powerUp.type) {
             case PowerUpType::WIDE_PADDLE:
-                // Horizontal line
-                drawQuad(powerUp.position.x - iconSize, powerUp.position.y - 1,
-                        iconSize * 2, 2, iconColor);
+                // Horizontal paddle shape
+                drawQuad(powerUp.position.x - iconSize, powerUp.position.y - 2,
+                        iconSize * 2, 4, iconColor);
+                // Edge caps
+                drawQuad(powerUp.position.x - iconSize - 2, powerUp.position.y - 1,
+                        2, 2, iconColor);
+                drawQuad(powerUp.position.x + iconSize, powerUp.position.y - 1,
+                        2, 2, iconColor);
                 break;
 
             case PowerUpType::SLOW_BALL:
-                // Circle
-                drawCircle(powerUp.position.x, powerUp.position.y, iconSize * 0.5f, iconColor, 12);
+                // Clock/slow symbol
+                drawCircle(powerUp.position.x, powerUp.position.y, iconSize * 0.6f, iconColor, 12);
+                drawCircle(powerUp.position.x, powerUp.position.y, iconSize * 0.35f, colorDark, 8);
+                // Clock hands
+                drawQuad(powerUp.position.x - 1, powerUp.position.y, 2, iconSize * 0.4f, iconColor);
                 break;
 
             case PowerUpType::EXTRA_LIFE:
-                // Heart shape (simple circles)
+                // Heart shape
                 drawCircle(powerUp.position.x - 3, powerUp.position.y + 2, 4, iconColor, 8);
                 drawCircle(powerUp.position.x + 3, powerUp.position.y + 2, 4, iconColor, 8);
-                drawQuad(powerUp.position.x - 6, powerUp.position.y - 4, 12, 6, iconColor);
+                // Heart bottom point
+                drawQuad(powerUp.position.x - 5, powerUp.position.y - 2, 10, 4, iconColor);
+                drawQuad(powerUp.position.x - 3, powerUp.position.y - 5, 6, 3, iconColor);
                 break;
 
             case PowerUpType::MULTI_BALL:
-                // Multiple dots
-                drawCircle(powerUp.position.x, powerUp.position.y, 2, iconColor, 6);
-                drawCircle(powerUp.position.x - 5, powerUp.position.y, 2, iconColor, 6);
-                drawCircle(powerUp.position.x + 5, powerUp.position.y, 2, iconColor, 6);
+                // Multiple balls
+                drawCircle(powerUp.position.x, powerUp.position.y, 3, iconColor, 8);
+                drawCircle(powerUp.position.x - 6, powerUp.position.y + 2, 2.5f, iconColor, 6);
+                drawCircle(powerUp.position.x + 6, powerUp.position.y + 2, 2.5f, iconColor, 6);
                 break;
 
             case PowerUpType::BIG_BALL:
-                // Big circle with smaller circle inside
-                drawCircle(powerUp.position.x, powerUp.position.y, iconSize * 0.7f, iconColor, 12);
-                drawCircle(powerUp.position.x, powerUp.position.y, iconSize * 0.3f,
-                          glm::vec4(powerUp.color.r, powerUp.color.g, powerUp.color.b, 1.0f), 8);
+                // Large ball indicator
+                drawCircle(powerUp.position.x, powerUp.position.y, iconSize * 0.75f, iconColor, 12);
+                // Inner highlight
+                drawCircle(powerUp.position.x - 2, powerUp.position.y + 2, iconSize * 0.3f,
+                          glm::vec4(1.0f, 1.0f, 1.0f, 0.7f), 8);
                 break;
         }
     }
@@ -896,42 +1035,77 @@ void BreakoutGame::drawPowerUps() {
 void BreakoutGame::drawNoseIndicator() {
     if (!m_noseDetected || !m_showCameraBackground) return;
 
-    // Draw circle outline at nose position
-    float radius = 15.0f;
-    glm::vec4 color(0.3f, 1.0f, 0.3f, 0.8f);  // Green
+    // Retro style nose indicator
+    float radius = 18.0f;
+    glm::vec4 accentOrange(0.91f, 0.36f, 0.02f, 0.85f);  // Orange accent
+    glm::vec4 creamWhite(0.98f, 0.96f, 0.92f, 0.9f);
 
-    // Outer ring
-    drawCircle(m_nosePosition.x, m_nosePosition.y, radius, color, 20);
+    // Outer ring shadow
+    drawCircle(m_nosePosition.x + 2, m_nosePosition.y - 2, radius,
+              glm::vec4(0.0f, 0.0f, 0.0f, 0.25f), 20);
 
-    // Inner dot
-    drawCircle(m_nosePosition.x, m_nosePosition.y, 4.0f,
-              glm::vec4(1.0f, 1.0f, 1.0f, 0.9f), 12);
+    // Outer ring (orange accent)
+    drawCircle(m_nosePosition.x, m_nosePosition.y, radius, accentOrange, 20);
 
-    // Crosshair lines
-    float lineLen = 10.0f;
-    drawQuad(m_nosePosition.x - lineLen, m_nosePosition.y - 1, lineLen * 2, 2, color);
-    drawQuad(m_nosePosition.x - 1, m_nosePosition.y - lineLen, 2, lineLen * 2, color);
+    // Inner circle (cream)
+    drawCircle(m_nosePosition.x, m_nosePosition.y, radius * 0.7f, creamWhite, 16);
+
+    // Center dot (orange)
+    drawCircle(m_nosePosition.x, m_nosePosition.y, 5.0f, accentOrange, 10);
+
+    // Crosshair lines (cream)
+    float lineLen = 12.0f;
+    float lineThick = 2.5f;
+    drawQuad(m_nosePosition.x - lineLen - radius, m_nosePosition.y - lineThick * 0.5f,
+            lineLen, lineThick, creamWhite);
+    drawQuad(m_nosePosition.x + radius, m_nosePosition.y - lineThick * 0.5f,
+            lineLen, lineThick, creamWhite);
+    drawQuad(m_nosePosition.x - lineThick * 0.5f, m_nosePosition.y - lineLen - radius,
+            lineThick, lineLen, creamWhite);
+    drawQuad(m_nosePosition.x - lineThick * 0.5f, m_nosePosition.y + radius,
+            lineThick, lineLen, creamWhite);
 
     // Reset nose detected flag (will be set again on next update)
     m_noseDetected = false;
 }
 
 void BreakoutGame::drawUI() {
-    // UI bar at the very top (separate from gameplay)
+    // Retro UI color palette
+    glm::vec4 creamBg(0.96f, 0.94f, 0.91f, 0.95f);
+    glm::vec4 creamDark(0.88f, 0.85f, 0.80f, 1.0f);
+    glm::vec4 displayDark(0.16f, 0.16f, 0.16f, 1.0f);
+    glm::vec4 accentOrange(0.91f, 0.36f, 0.02f, 1.0f);
+    glm::vec4 accentRed(0.90f, 0.30f, 0.25f, 1.0f);
+
+    // UI bar below the top (leave space for camera/settings button)
+    float topMargin = 120.0f;  // Space for settings button and camera
     float uiBarHeight = 100.0f;
-    float uiBarY = m_screenH - uiBarHeight;
+    float uiBarY = m_screenH - topMargin - uiBarHeight;
 
-    // Draw semi-transparent UI background bar
-    drawQuad(0, uiBarY, m_screenW, uiBarHeight,
-            glm::vec4(0.0f, 0.0f, 0.0f, 0.5f));
+    // Draw retro cream UI background bar
+    drawQuad(0, uiBarY, m_screenW, uiBarHeight, creamBg);
 
-    // Larger score display in top center
-    float digitW = 40.0f;
-    float digitH = 60.0f;
-    float gap = 10.0f;
+    // Bottom border of UI bar
+    drawQuad(0, uiBarY - 4, m_screenW, 4, creamDark);
 
-    // Score (centered in UI bar at -140px)
-    glm::vec4 scoreColor(1.0f, 1.0f, 1.0f, 0.95f);
+    // Score display (dark inset in center)
+    float scoreDisplayW = 160.0f;
+    float scoreDisplayH = 65.0f;
+    float scoreDisplayX = (m_screenW - scoreDisplayW) * 0.5f;
+    float scoreDisplayY = uiBarY + (uiBarHeight - scoreDisplayH) * 0.5f;
+
+    // Inset border
+    drawQuad(scoreDisplayX - 2, scoreDisplayY - 2, scoreDisplayW + 4, scoreDisplayH + 4,
+            glm::vec4(0.10f, 0.10f, 0.10f, 1.0f));
+    // Dark display background
+    drawQuad(scoreDisplayX, scoreDisplayY, scoreDisplayW, scoreDisplayH, displayDark);
+
+    // Score digits
+    float digitW = 32.0f;
+    float digitH = 50.0f;
+    float gap = 8.0f;
+
+    glm::vec4 scoreColor(1.0f, 0.85f, 0.0f, 1.0f);  // Gold
     int score = m_score;
 
     // Calculate score width to center it
@@ -941,7 +1115,7 @@ void BreakoutGame::drawUI() {
 
     float totalWidth = numDigits * (digitW + gap) - gap;
     float startX = (m_screenW - totalWidth) * 0.5f;
-    float startY = m_screenH - 200.0f;  // All UI at -200px
+    float startY = scoreDisplayY + (scoreDisplayH - digitH) * 0.5f;
 
     if (score == 0) {
         drawDigit(0, startX, startY, digitW, digitH, scoreColor);
@@ -959,43 +1133,102 @@ void BreakoutGame::drawUI() {
         }
     }
 
-    // Lives (top right in UI bar at -200px)
-    glm::vec4 heartColor(1.0f, 0.3f, 0.3f, 0.9f);
-    float heartX = m_screenW - 25.0f;
-    float heartY = m_screenH - 200.0f;  // Same as score -200px
+    // Lives display (right side - dark inset)
+    float livesDisplayW = 90.0f;
+    float livesDisplayH = 45.0f;
+    float livesDisplayX = m_screenW - livesDisplayW - 15.0f;
+    float livesDisplayY = uiBarY + (uiBarHeight - livesDisplayH) * 0.5f;
+
+    // Inset border
+    drawQuad(livesDisplayX - 2, livesDisplayY - 2, livesDisplayW + 4, livesDisplayH + 4,
+            glm::vec4(0.10f, 0.10f, 0.10f, 1.0f));
+    // Dark display background
+    drawQuad(livesDisplayX, livesDisplayY, livesDisplayW, livesDisplayH, displayDark);
+
+    // Heart icons for lives
+    float heartX = livesDisplayX + livesDisplayW - 18.0f;
+    float heartY = livesDisplayY + livesDisplayH * 0.5f;
     for (int i = 0; i < m_lives; i++) {
-        drawCircle(heartX - i * 30.0f, heartY, 10, heartColor);  // Slightly larger hearts
+        // Heart shadow
+        drawCircle(heartX - i * 25.0f + 1, heartY - 1, 9,
+                  glm::vec4(0.0f, 0.0f, 0.0f, 0.3f));
+        // Heart
+        drawCircle(heartX - i * 25.0f, heartY, 8, accentRed);
+        // Heart highlight
+        drawCircle(heartX - i * 25.0f - 2, heartY + 2, 3,
+                  glm::vec4(1.0f, 0.5f, 0.5f, 0.6f));
     }
 
-    // Level indicator (top left in UI bar at -200px)
-    float levelDigitW = 35.0f;
-    float levelDigitH = 50.0f;
-    float levelX = 25.0f;  // Left side
-    float levelY = m_screenH - 200.0f;  // Same as score -200px
+    // Level display (left side - dark inset)
+    float levelDisplayW = 70.0f;
+    float levelDisplayH = 45.0f;
+    float levelDisplayX = 15.0f;
+    float levelDisplayY = uiBarY + (uiBarHeight - levelDisplayH) * 0.5f;
 
-    // "LV" label
-    glm::vec4 levelLabelColor(0.7f, 0.7f, 0.7f, 0.9f);
-    drawQuad(levelX, levelY + levelDigitH + 5, 15, 5, levelLabelColor);
-    drawQuad(levelX + 20, levelY + levelDigitH + 5, 15, 5, levelLabelColor);
+    // Inset border
+    drawQuad(levelDisplayX - 2, levelDisplayY - 2, levelDisplayW + 4, levelDisplayH + 4,
+            glm::vec4(0.10f, 0.10f, 0.10f, 1.0f));
+    // Dark display background
+    drawQuad(levelDisplayX, levelDisplayY, levelDisplayW, levelDisplayH, displayDark);
 
-    // Level number
-    drawDigit(m_level, levelX + 45, levelY, levelDigitW, levelDigitH,
-             glm::vec4(0.3f, 1.0f, 0.3f, 0.9f));
+    // "LV" label (small) - at top of display
+    float labelY = levelDisplayY + levelDisplayH - 14;
+    drawQuad(levelDisplayX + 10, labelY, 8, 3, glm::vec4(0.5f, 0.5f, 0.5f, 1.0f));
+    drawQuad(levelDisplayX + 22, labelY, 8, 3, glm::vec4(0.5f, 0.5f, 0.5f, 1.0f));
+
+    // Level number - centered in display
+    float levelDigitW = 26.0f;
+    float levelDigitH = 32.0f;
+    float levelX = levelDisplayX + (levelDisplayW - levelDigitW) * 0.5f;
+    float levelY = levelDisplayY + 5;
+
+    // Draw level number with orange accent
+    drawDigit(m_level % 10, levelX, levelY, levelDigitW, levelDigitH, accentOrange);
+
+    // If level >= 10, draw tens digit
+    if (m_level >= 10) {
+        drawDigit((m_level / 10) % 10, levelX - levelDigitW - 4, levelY,
+                 levelDigitW, levelDigitH, accentOrange);
+    }
 
     // Messages
     if (m_state == GameState::READY) {
-        // "Tap or nod to launch" message
         float cx = m_screenW * 0.5f;
         float cy = m_screenH * 0.4f;
         float pulse = (sin(m_currentTime * 3.0f) + 1.0f) * 0.5f;
-        float alpha = 0.4f + pulse * 0.4f;
+        float alpha = 0.6f + pulse * 0.3f;
 
-        // Simple arrow pointing up
         glm::vec4 hintColor(1.0f, 1.0f, 1.0f, alpha);
-        drawQuad(cx - 2, cy, 4, 30, hintColor);
-        // Arrow head - using quads
-        drawQuad(cx - 10, cy + 30, 8, 2, hintColor);
-        drawQuad(cx + 2, cy + 30, 8, 2, hintColor);
+
+        // Draw "OPEN MOUTH" text
+        float charW = 28.0f;
+        float charH = 36.0f;
+        float spacing = 4.0f;
+
+        // "OPEN" = 4 chars
+        float openWidth = 4 * charW + 3 * spacing;
+        // "MOUTH" = 5 chars
+        float mouthWidth = 5 * charW + 4 * spacing;
+        // "TO START" = 8 chars (including space)
+        float toStartWidth = 8 * charW + 7 * spacing;
+
+        // Draw "OPEN" on first line
+        drawText("OPEN", cx - openWidth * 0.5f, cy + 50, charW, charH, spacing, hintColor);
+
+        // Draw "MOUTH" on second line
+        drawText("MOUTH", cx - mouthWidth * 0.5f, cy, charW, charH, spacing, hintColor);
+
+        // Draw "TO START" on third line (smaller)
+        float smallCharW = 20.0f;
+        float smallCharH = 26.0f;
+        float smallSpacing = 3.0f;
+        float toWidth = 2 * smallCharW + smallSpacing;
+        float startWidth = 5 * smallCharW + 4 * smallSpacing;
+        float totalSmallWidth = toWidth + smallCharW * 0.6f + startWidth;
+
+        glm::vec4 subColor(0.8f, 0.8f, 0.8f, alpha * 0.8f);
+        drawText("TO", cx - totalSmallWidth * 0.5f, cy - 50, smallCharW, smallCharH, smallSpacing, subColor);
+        drawText("START", cx - totalSmallWidth * 0.5f + toWidth + smallCharW * 0.6f, cy - 50, smallCharW, smallCharH, smallSpacing, subColor);
     }
     else if (m_state == GameState::LEVEL_COMPLETE) {
         float cx = m_screenW * 0.5f;
@@ -1004,9 +1237,38 @@ void BreakoutGame::drawUI() {
         // Fade in effect
         float alpha = glm::min(m_stateTimer / 0.5f, 1.0f);
 
-        // Background box
-        drawQuad(cx - 180, cy - 50, 360, 100,
-                glm::vec4(0.0f, 0.0f, 0.0f, 0.7f * alpha));
+        // Retro color palette
+        glm::vec4 creamLight(0.98f, 0.97f, 0.95f, alpha);
+        glm::vec4 creamDark(0.91f, 0.88f, 0.84f, alpha);
+        glm::vec4 displayDark(0.16f, 0.16f, 0.16f, alpha);
+        glm::vec4 accentOrange(0.91f, 0.36f, 0.02f, alpha);
+
+        // Container dimensions
+        float containerW = 280.0f;
+        float containerH = 140.0f;
+        float containerX = cx - containerW * 0.5f;
+        float containerY = cy - containerH * 0.5f;
+
+        // Outer shadow
+        drawQuad(containerX + 6, containerY - 6, containerW, containerH,
+                glm::vec4(0.0f, 0.0f, 0.0f, 0.25f * alpha));
+
+        // Main cream container (gradient effect)
+        drawQuad(containerX, containerY, containerW, containerH * 0.5f, creamDark);
+        drawQuad(containerX, containerY + containerH * 0.5f, containerW, containerH * 0.5f, creamLight);
+
+        // Dark inset display
+        float displayMargin = 15.0f;
+        float displayX = containerX + displayMargin;
+        float displayY = containerY + displayMargin;
+        float displayW = containerW - displayMargin * 2;
+        float displayH = containerH - displayMargin * 2;
+
+        // Display border
+        drawQuad(displayX - 2, displayY - 2, displayW + 4, displayH + 4,
+                glm::vec4(0.10f, 0.10f, 0.10f, alpha));
+        // Display background
+        drawQuad(displayX, displayY, displayW, displayH, displayDark);
 
         int nextLevel = m_level + 1;
 
@@ -1015,36 +1277,38 @@ void BreakoutGame::drawUI() {
             glm::vec4 goldColor(1.0f, 0.85f, 0.0f, alpha);
 
             // Draw "ENDLESS"
-            float endCharW = 30.0f;
-            float endCharH = 35.0f;
-            float endSpacing = 5.0f;
+            float endCharW = 26.0f;
+            float endCharH = 32.0f;
+            float endSpacing = 4.0f;
             float endWidth = (7 * endCharW) + (6 * endSpacing);
-            drawText("ENDLESS", cx - endWidth * 0.5f, cy + 10, endCharW, endCharH, endSpacing, goldColor);
+            drawText("ENDLESS", cx - endWidth * 0.5f, cy + 15, endCharW, endCharH, endSpacing, goldColor);
 
             // Draw level number below
-            float numWidth = 50.0f;
-            drawDigit(nextLevel, cx - numWidth * 0.5f, cy - 45, numWidth, 40, goldColor);
+            float numWidth = 40.0f;
+            drawDigit(nextLevel, cx - numWidth * 0.5f, cy - 35, numWidth, 35, goldColor);
         } else {
             // Show next level number: "LEVEL 2", "LEVEL 3", etc.
-            glm::vec4 textColor(0.2f, 1.0f, 0.3f, alpha);
+            // Use orange accent color
+            glm::vec4 textColor = accentOrange;
 
             // Draw "LEVEL"
-            float lvlCharW = 35.0f;
-            float lvlCharH = 45.0f;
-            float lvlSpacing = 6.0f;
+            float lvlCharW = 28.0f;
+            float lvlCharH = 36.0f;
+            float lvlSpacing = 5.0f;
             float lvlWidth = (5 * lvlCharW) + (4 * lvlSpacing);
 
             // Calculate total width including number
-            float numWidth = 50.0f;
-            float gap = 20.0f;
+            float numWidth = 40.0f;
+            float gap = 15.0f;
             float totalWidth = lvlWidth + gap + numWidth;
 
             float startX = cx - totalWidth * 0.5f;
 
-            // Draw "LEVEL"
-            drawText("LEVEL", startX, cy - lvlCharH * 0.5f, lvlCharW, lvlCharH, lvlSpacing, textColor);
+            // Draw "LEVEL" with light color
+            glm::vec4 levelTextColor(0.80f, 0.80f, 0.80f, alpha);
+            drawText("LEVEL", startX, cy - lvlCharH * 0.5f, lvlCharW, lvlCharH, lvlSpacing, levelTextColor);
 
-            // Draw level number next to it
+            // Draw level number with orange accent
             drawDigit(nextLevel, startX + lvlWidth + gap, cy - lvlCharH * 0.5f, numWidth, lvlCharH, textColor);
         }
     }
@@ -1055,15 +1319,89 @@ void BreakoutGame::drawUI() {
         // Fade in effect
         float alpha = glm::min(m_stateTimer / 0.5f, 1.0f);
 
-        // Background box
-        drawQuad(cx - 200, cy - 120, 400, 240,
-                glm::vec4(0.0f, 0.0f, 0.0f, 0.8f * alpha));
+        // Retro color palette
+        glm::vec4 creamLight(0.98f, 0.97f, 0.95f, alpha);
+        glm::vec4 creamDark(0.91f, 0.88f, 0.84f, alpha);
+        glm::vec4 creamMid(0.88f, 0.85f, 0.80f, alpha);
+        glm::vec4 displayDark(0.16f, 0.16f, 0.16f, alpha);
+        glm::vec4 accentOrange(0.91f, 0.36f, 0.02f, alpha);
+        glm::vec4 accentRed(0.90f, 0.22f, 0.21f, alpha);
+        glm::vec4 textDark(0.20f, 0.20f, 0.20f, alpha);
+
+        // Container dimensions
+        float containerW = 320.0f;
+        float containerH = 360.0f;
+        float containerX = cx - containerW * 0.5f;
+        float containerY = cy - containerH * 0.5f;
+        float padding = 20.0f;
+
+        // Outer shadow
+        drawQuad(containerX + 8, containerY - 8, containerW, containerH,
+                glm::vec4(0.0f, 0.0f, 0.0f, 0.25f * alpha));
+
+        // Main cream container (gradient effect with two layers)
+        drawQuad(containerX, containerY, containerW, containerH * 0.5f, creamDark);
+        drawQuad(containerX, containerY + containerH * 0.5f, containerW, containerH * 0.5f, creamLight);
+
+        // Inner content area with darker cream
+        float contentX = containerX + padding;
+        float contentY = containerY + padding;
+        float contentW = containerW - padding * 2;
+        float contentH = containerH - padding * 2;
+        drawQuad(contentX, contentY, contentW, contentH, creamMid);
+
+        // Dark inset display for "GAME OVER" title
+        float displayH = 60.0f;
+        float displayX = contentX + 10;
+        float displayY = containerY + containerH - padding - displayH - 10;
+        float displayW = contentW - 20;
+
+        // Display border (darker)
+        drawQuad(displayX - 2, displayY - 2, displayW + 4, displayH + 4,
+                glm::vec4(0.10f, 0.10f, 0.10f, alpha));
+        // Display background
+        drawQuad(displayX, displayY, displayW, displayH, displayDark);
+
+        // "GAME OVER" text in display
+        float titleCharW = 22.0f;
+        float titleCharH = 28.0f;
+        float titleSpacing = 4.0f;
+        // "GAME" = 4 chars, "OVER" = 4 chars
+        float gameWidth = 4 * titleCharW + 3 * titleSpacing;
+        float overWidth = 4 * titleCharW + 3 * titleSpacing;
+
+        glm::vec4 displayTextColor(0.80f, 0.80f, 0.80f, alpha);
+        drawText("GAME", cx - (gameWidth + titleCharW * 0.3f + overWidth) * 0.5f,
+                 displayY + (displayH - titleCharH) * 0.5f,
+                 titleCharW, titleCharH, titleSpacing, displayTextColor);
+        drawText("OVER", cx - (gameWidth + titleCharW * 0.3f + overWidth) * 0.5f + gameWidth + titleCharW * 0.3f,
+                 displayY + (displayH - titleCharH) * 0.5f,
+                 titleCharW, titleCharH, titleSpacing, displayTextColor);
+
+        // Score section with dark inset
+        float scoreDisplayH = 80.0f;
+        float scoreDisplayY = displayY - scoreDisplayH - 15;
+
+        // Score display border
+        drawQuad(displayX - 2, scoreDisplayY - 2, displayW + 4, scoreDisplayH + 4,
+                glm::vec4(0.10f, 0.10f, 0.10f, alpha));
+        // Score display background
+        drawQuad(displayX, scoreDisplayY, displayW, scoreDisplayH, displayDark);
+
+        // "SCORE" label
+        float labelCharW = 12.0f;
+        float labelCharH = 14.0f;
+        float labelSpacing = 2.0f;
+        glm::vec4 labelColor(0.50f, 0.50f, 0.50f, alpha);
+        float scoreLabel = 5 * labelCharW + 4 * labelSpacing;
+        drawText("SCORE", cx - scoreLabel * 0.5f, scoreDisplayY + scoreDisplayH - 20,
+                 labelCharW, labelCharH, labelSpacing, labelColor);
 
         // Display final score (large, centered)
-        float scoreDigitW = 50.0f;
-        float scoreDigitH = 75.0f;
-        float scoreGap = 12.0f;
-        glm::vec4 scoreColor(1.0f, 1.0f, 0.3f, alpha);
+        float scoreDigitW = 40.0f;
+        float scoreDigitH = 55.0f;
+        float scoreGap = 10.0f;
+        glm::vec4 scoreColor(1.0f, 0.85f, 0.0f, alpha);  // Gold/yellow
 
         int finalScore = m_score;
         int temp2 = finalScore;
@@ -1072,7 +1410,7 @@ void BreakoutGame::drawUI() {
 
         float totalWidth2 = numDigits2 * (scoreDigitW + scoreGap) - scoreGap;
         float scoreStartX = (m_screenW - totalWidth2) * 0.5f;
-        float scoreY = cy + 20;
+        float scoreY = scoreDisplayY + 10;
 
         if (finalScore == 0) {
             drawDigit(0, scoreStartX, scoreY, scoreDigitW, scoreDigitH, scoreColor);
@@ -1090,63 +1428,58 @@ void BreakoutGame::drawUI() {
             }
         }
 
-        // Restart button with text
-        float buttonW = 220.0f;
+        // Restart button (orange accent)
+        float buttonW = 200.0f;
         float buttonH = 50.0f;
         float buttonX = cx - buttonW * 0.5f;
-        float buttonY = cy - 40;
+        float buttonY = scoreDisplayY - buttonH - 20;
 
-        // Button background (green)
-        glm::vec4 buttonColor(0.2f, 0.8f, 0.3f, alpha);
+        // Orange button with pulse effect
+        glm::vec4 buttonColor = accentOrange;
         if (m_stateTimer > 0.5f) {
-            // Pulse effect after fade in
-            float pulse = (sin(m_stateTimer * 2.0f) + 1.0f) * 0.15f;
-            buttonColor = glm::vec4(0.2f + pulse, 0.8f + pulse, 0.3f + pulse, alpha);
+            float pulse = (sin(m_stateTimer * 2.0f) + 1.0f) * 0.08f;
+            buttonColor = glm::vec4(0.91f + pulse, 0.36f + pulse, 0.02f + pulse, alpha);
         }
 
-        // Draw button with 3D effect
-        // Shadow
+        // Button shadow
         drawQuad(buttonX + 4, buttonY - 4, buttonW, buttonH,
-                glm::vec4(0.0f, 0.0f, 0.0f, 0.4f * alpha));
-        // Main button
-        drawQuad(buttonX, buttonY, buttonW, buttonH, buttonColor);
-        // Highlight
-        drawQuad(buttonX + 10, buttonY + buttonH - 12, buttonW - 20, 6,
-                glm::vec4(1.0f, 1.0f, 1.0f, 0.3f * alpha));
+                glm::vec4(0.0f, 0.0f, 0.0f, 0.3f * alpha));
+        // Main button body (gradient effect)
+        drawQuad(buttonX, buttonY, buttonW, buttonH * 0.5f, buttonColor);
+        drawQuad(buttonX, buttonY + buttonH * 0.5f, buttonW, buttonH * 0.5f,
+                glm::vec4(buttonColor.r * 1.1f, buttonColor.g * 1.1f, buttonColor.b * 1.1f, alpha));
+        // Top highlight
+        drawQuad(buttonX + 10, buttonY + buttonH - 8, buttonW - 20, 4,
+                glm::vec4(1.0f, 1.0f, 1.0f, 0.35f * alpha));
 
-        // Draw "RESTART" text on button
-        float restartCharW = 20.0f;
-        float restartCharH = 26.0f;
+        // "RESTART" text on button
+        float restartCharW = 18.0f;
+        float restartCharH = 24.0f;
         float restartSpacing = 3.0f;
-        float restartWidth = (7 * restartCharW) + (6 * restartSpacing);  // "RESTART" = 7 chars
+        float restartWidth = (7 * restartCharW) + (6 * restartSpacing);
         float restartX = cx - restartWidth * 0.5f;
         float restartY = buttonY + (buttonH - restartCharH) * 0.5f;
         glm::vec4 textOnButtonColor(1.0f, 1.0f, 1.0f, alpha);
         drawText("RESTART", restartX, restartY, restartCharW, restartCharH, restartSpacing, textOnButtonColor);
 
-        // Menu button (below restart)
-        float menuButtonY = buttonY - buttonH - 15;
+        // Menu button (outlined style with red accent)
+        float menuButtonY = buttonY - buttonH - 12;
 
-        // Button background (blue-gray)
-        glm::vec4 menuButtonColor(0.4f, 0.5f, 0.6f, alpha);
+        // Button border
+        float borderThick = 3.0f;
+        drawQuad(buttonX - borderThick, menuButtonY - borderThick,
+                 buttonW + borderThick * 2, buttonH + borderThick * 2, accentRed);
+        // Button inner (cream)
+        drawQuad(buttonX, menuButtonY, buttonW, buttonH, creamLight);
 
-        // Shadow
-        drawQuad(buttonX + 4, menuButtonY - 4, buttonW, buttonH,
-                glm::vec4(0.0f, 0.0f, 0.0f, 0.4f * alpha));
-        // Main button
-        drawQuad(buttonX, menuButtonY, buttonW, buttonH, menuButtonColor);
-        // Highlight
-        drawQuad(buttonX + 10, menuButtonY + buttonH - 12, buttonW - 20, 6,
-                glm::vec4(1.0f, 1.0f, 1.0f, 0.3f * alpha));
-
-        // Draw "MENU" text on button
-        float menuCharW = 28.0f;
-        float menuCharH = 26.0f;
-        float menuSpacing = 5.0f;
-        float menuWidth = (4 * menuCharW) + (3 * menuSpacing);  // "MENU" = 4 chars
+        // "MENU" text on button
+        float menuCharW = 24.0f;
+        float menuCharH = 24.0f;
+        float menuSpacing = 4.0f;
+        float menuWidth = (4 * menuCharW) + (3 * menuSpacing);
         float menuTextX = cx - menuWidth * 0.5f;
         float menuTextY = menuButtonY + (buttonH - menuCharH) * 0.5f;
-        drawText("MENU", menuTextX, menuTextY, menuCharW, menuCharH, menuSpacing, textOnButtonColor);
+        drawText("MENU", menuTextX, menuTextY, menuCharW, menuCharH, menuSpacing, accentRed);
     }
 }
 
@@ -1246,6 +1579,17 @@ void BreakoutGame::drawLetter(char letter, float x, float y, float w, float h, c
             drawQuad(x, y + thick, thick, h - thick, color);  // Left
             drawQuad(x + w - thick, y + thick, thick, h - thick, color);  // Right
             drawQuad(x, y, w, thick, color);  // Bottom
+            break;
+        case 'P':
+            drawQuad(x, y + h - thick, w * 0.8f, thick, color);  // Top
+            drawQuad(x, y, thick, h, color);  // Left
+            drawQuad(x + w - thick, y + h * 0.5f, thick, h * 0.5f, color);  // Right top
+            drawQuad(x, y + h * 0.5f - thick * 0.5f, w, thick, color);  // Middle
+            break;
+        case 'H':
+            drawQuad(x, y, thick, h, color);  // Left
+            drawQuad(x + w - thick, y, thick, h, color);  // Right
+            drawQuad(x, y + h * 0.5f - thick * 0.5f, w, thick, color);  // Middle
             break;
     }
 }

@@ -7,12 +7,19 @@ import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -20,33 +27,40 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.example.dimohamster.audio.BackgroundMusicManager
-import com.example.dimohamster.ui.LeaderboardDialog
-import com.example.dimohamster.ui.theme.DIMOHAMSTERTheme
+import com.example.dimohamster.database.HighScoreDatabase
+import com.example.dimohamster.ui.theme.SUPERBALLTheme
+
+// Retro color palette
+private val CreamBackground = Color(0xFFF5F0E8)
+private val CreamLight = Color(0xFFFAF7F2)
+private val CreamDark = Color(0xFFE8E0D5)
+private val DisplayDark = Color(0xFF2A2A2A)
+private val DisplayGray = Color(0xFF3A3A3A)
+private val AccentOrange = Color(0xFFE85D04)
+private val AccentGreen = Color(0xFF4CAF50)
+private val TextDark = Color(0xFF333333)
+private val TextMuted = Color(0xFF888888)
 
 class MainMenuActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Enable immersive fullscreen
         setupFullscreen()
-
-        // Keep screen on
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
-        // Start background music
         BackgroundMusicManager.start(this)
 
         setContent {
-            DIMOHAMSTERTheme {
+            SUPERBALLTheme {
                 MainMenuScreen(
                     onPlayClicked = {
-                        // Navigate to MainActivity (game)
-                        val intent = Intent(this, MainActivity::class.java)
+                        val intent = Intent(this, PlayerNameActivity::class.java)
                         startActivity(intent)
                         finish()
                     }
@@ -91,229 +105,356 @@ fun MainMenuScreen(
 ) {
     var showLeaderboard by remember { mutableStateOf(false) }
     var showHowToPlay by remember { mutableStateOf(false) }
-    var showSettings by remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        Color(0xFF1A1A2E),
-                        Color(0xFF16213E),
-                        Color(0xFF0F3460)
-                    )
-                )
-            ),
+            .background(CreamBackground),
         contentAlignment = Alignment.Center
     ) {
-        Column(
+        // Main card container
+        Box(
             modifier = Modifier
-                .fillMaxWidth(0.85f)
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .fillMaxWidth(0.9f)
+                .shadow(
+                    elevation = 20.dp,
+                    shape = RoundedCornerShape(32.dp),
+                    ambientColor = Color(0x40000000),
+                    spotColor = Color(0x30000000)
+                )
+                .clip(RoundedCornerShape(32.dp))
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(CreamLight, CreamDark)
+                    )
+                )
+                .padding(24.dp)
         ) {
-            // Game Title
-            Text(
-                text = "BREAKOUT",
-                fontSize = 52.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFFFFC107),
-                letterSpacing = 6.sp
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Subtitle
-            Text(
-                text = "Control with your nose!",
-                fontSize = 18.sp,
-                color = Color(0xFFB0B0B0),
-                textAlign = TextAlign.Center
-            )
-
-            Spacer(modifier = Modifier.height(60.dp))
-
-            // Play button (primary action)
-            Button(
-                onClick = onPlayClicked,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(64.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF4CAF50)
-                ),
-                shape = RoundedCornerShape(16.dp),
-                elevation = ButtonDefaults.buttonElevation(
-                    defaultElevation = 8.dp
-                )
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(
-                    text = "PLAY",
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White,
-                    letterSpacing = 4.sp
-                )
+                // Inset display area for title
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(DisplayDark)
+                        .border(
+                            width = 2.dp,
+                            color = Color(0xFF1A1A1A),
+                            shape = RoundedCornerShape(16.dp)
+                        )
+                        .padding(vertical = 24.dp, horizontal = 16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        // Small label
+                        Text(
+                            text = "NOSE CONTROL",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF666666),
+                            letterSpacing = 2.sp
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        // Main title
+                        Text(
+                            text = "SUPERBALL",
+                            fontSize = 36.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFEEEEEE),
+                            letterSpacing = 6.sp
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        // Decorative line
+                        Box(
+                            modifier = Modifier
+                                .width(140.dp)
+                                .height(2.dp)
+                                .background(AccentOrange)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(32.dp))
+
+                // Play button (main orange button)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Left indicator
+                    Box(
+                        modifier = Modifier
+                            .size(16.dp)
+                            .shadow(2.dp, CircleShape)
+                            .clip(CircleShape)
+                            .background(AccentGreen)
+                    )
+
+                    Spacer(modifier = Modifier.width(20.dp))
+
+                    Button(
+                        onClick = onPlayClicked,
+                        modifier = Modifier
+                            .height(64.dp)
+                            .width(200.dp)
+                            .shadow(
+                                elevation = 10.dp,
+                                shape = RoundedCornerShape(32.dp),
+                                ambientColor = AccentOrange.copy(alpha = 0.4f),
+                                spotColor = AccentOrange.copy(alpha = 0.4f)
+                            ),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = AccentOrange
+                        ),
+                        shape = RoundedCornerShape(32.dp),
+                        elevation = ButtonDefaults.buttonElevation(
+                            defaultElevation = 8.dp,
+                            pressedElevation = 2.dp
+                        )
+                    ) {
+                        Text(
+                            text = "PLAY",
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                            letterSpacing = 4.sp
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(20.dp))
+
+                    // Speaker dots
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        repeat(3) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                repeat(2) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(6.dp)
+                                            .clip(CircleShape)
+                                            .background(Color(0xFF888888))
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Secondary buttons row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Leaderboard button
+                    RetroButton(
+                        text = "SCORES",
+                        onClick = { showLeaderboard = true },
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    // How to Play button
+                    RetroButton(
+                        text = "HOW TO",
+                        onClick = { showHowToPlay = true },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Bottom version bar
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color(0xFFE0D8CC))
+                        .padding(12.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "v1.0",
+                            fontSize = 11.sp,
+                            color = TextMuted
+                        )
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .clip(CircleShape)
+                                    .background(AccentGreen)
+                            )
+                            Text(
+                                text = "READY",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TextMuted
+                            )
+                        }
+                    }
+                }
             }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Leaderboard button
-            Button(
-                onClick = { showLeaderboard = true },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFFFC107)
-                ),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Text(
-                    text = "LEADERBOARD",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.Black,
-                    letterSpacing = 2.sp
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // How to Play button
-            OutlinedButton(
-                onClick = { showHowToPlay = true },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = Color(0xFF81D4FA)
-                )
-            ) {
-                Text(
-                    text = "HOW TO PLAY",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 2.sp
-                )
-            }
-
-            Spacer(modifier = Modifier.height(80.dp))
-
-            // Version or credits
-            Text(
-                text = "v1.0",
-                fontSize = 12.sp,
-                color = Color(0xFF606060)
-            )
         }
     }
 
     // Leaderboard dialog
     if (showLeaderboard) {
-        LeaderboardDialog(
-            onDismiss = { showLeaderboard = false }
-        )
+        RetroLeaderboardDialog(onDismiss = { showLeaderboard = false })
     }
 
     // How to Play dialog
     if (showHowToPlay) {
-        HowToPlayDialog(
-            onDismiss = { showHowToPlay = false }
+        RetroHowToPlayDialog(onDismiss = { showHowToPlay = false })
+    }
+}
+
+@Composable
+fun RetroButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Button(
+        onClick = onClick,
+        modifier = modifier
+            .height(48.dp)
+            .shadow(
+                elevation = 4.dp,
+                shape = RoundedCornerShape(12.dp)
+            ),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = CreamLight
+        ),
+        shape = RoundedCornerShape(12.dp),
+        elevation = ButtonDefaults.buttonElevation(
+            defaultElevation = 4.dp,
+            pressedElevation = 1.dp
+        )
+    ) {
+        Text(
+            text = text,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Bold,
+            color = TextDark,
+            letterSpacing = 1.sp
         )
     }
 }
 
 @Composable
-private fun HowToPlayDialog(
-    onDismiss: () -> Unit
-) {
-    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
-        Card(
+fun RetroLeaderboardDialog(onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    val database = remember { HighScoreDatabase(context) }
+    val highScores = remember { database.getTopScores(10) }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = Color(0xEE000000)
-            )
+                .fillMaxHeight(0.75f)
+                .shadow(20.dp, RoundedCornerShape(24.dp))
+                .clip(RoundedCornerShape(24.dp))
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(CreamLight, CreamDark)
+                    )
+                )
+                .padding(20.dp)
         ) {
             Column(
-                modifier = Modifier
-                    .padding(24.dp)
-                    .fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(
-                    text = "How to Play",
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF81D4FA)
-                )
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                InstructionItem("1", "Move your nose left and right to control the paddle")
-                Spacer(modifier = Modifier.height(12.dp))
-                InstructionItem("2", "Open your mouth or tap the screen to launch the ball")
-                Spacer(modifier = Modifier.height(12.dp))
-                InstructionItem("3", "Break all the bricks to advance to the next level")
-                Spacer(modifier = Modifier.height(12.dp))
-                InstructionItem("4", "Catch power-ups for special abilities!")
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                Text(
-                    text = "Power-Ups",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                PowerUpItem(Color(0xFF2196F3), "Wide Paddle", "Makes your paddle wider")
-                Spacer(modifier = Modifier.height(8.dp))
-                PowerUpItem(Color(0xFF4CAF50), "Slow Ball", "Slows down the ball")
-                Spacer(modifier = Modifier.height(8.dp))
-                PowerUpItem(Color(0xFFF44336), "Extra Life", "Gain an extra life")
-                Spacer(modifier = Modifier.height(8.dp))
-                PowerUpItem(Color(0xFFFFAB00), "Big Ball", "Doubles the ball size")
+                // Title display
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(DisplayDark)
+                        .border(2.dp, Color(0xFF1A1A1A), RoundedCornerShape(12.dp))
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "LEADERBOARD",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFFFCC00),
+                        letterSpacing = 3.sp
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Pity system info
-                Text(
-                    text = "Tip",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
+                // Scores list
+                if (highScores.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color(0xFFE0D8CC))
+                            .padding(24.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "No scores yet!\nPlay a game to set a record",
+                            fontSize = 14.sp,
+                            color = TextMuted,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color(0xFFE0D8CC))
+                            .padding(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        itemsIndexed(highScores) { index, entry ->
+                            RetroScoreEntry(
+                                rank = index + 1,
+                                playerName = entry.playerName,
+                                score = entry.score,
+                                level = entry.level
+                            )
+                        }
+                    }
+                }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-                Text(
-                    text = "The fewer lives you have, the more power-ups will drop!",
-                    fontSize = 13.sp,
-                    color = Color(0xFFB0B0B0),
-                    textAlign = TextAlign.Center
-                )
-
-                Spacer(modifier = Modifier.height(24.dp))
-
+                // Close button
                 Button(
                     onClick = onDismiss,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF4CAF50)
-                    ),
-                    shape = RoundedCornerShape(12.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = AccentOrange),
+                    shape = RoundedCornerShape(24.dp)
                 ) {
                     Text(
-                        text = "Got it!",
+                        text = "CLOSE",
                         fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
                         color = Color.White
                     )
                 }
@@ -323,59 +464,230 @@ private fun HowToPlayDialog(
 }
 
 @Composable
-private fun InstructionItem(number: String, text: String) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.Top
+fun RetroScoreEntry(
+    rank: Int,
+    playerName: String,
+    score: Int,
+    level: Int
+) {
+    val rankColor = when (rank) {
+        1 -> Color(0xFFFFD700)
+        2 -> Color(0xFFC0C0C0)
+        3 -> Color(0xFFCD7F32)
+        else -> TextMuted
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .background(CreamLight)
+            .padding(12.dp)
     ) {
-        Surface(
-            modifier = Modifier.size(28.dp),
-            shape = RoundedCornerShape(14.dp),
-            color = Color(0xFF4CAF50)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(contentAlignment = Alignment.Center) {
-                Text(
-                    text = number,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // Rank
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .clip(CircleShape)
+                        .background(if (rank <= 3) rankColor.copy(alpha = 0.2f) else Color(0xFFE0D8CC)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "$rank",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (rank <= 3) rankColor else TextDark
+                    )
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Column {
+                    Text(
+                        text = playerName,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextDark
+                    )
+                    Text(
+                        text = "Level $level",
+                        fontSize = 11.sp,
+                        color = TextMuted
+                    )
+                }
             }
+            Text(
+                text = "$score",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = AccentOrange
+            )
+        }
+    }
+}
+
+@Composable
+fun RetroHowToPlayDialog(onDismiss: () -> Unit) {
+    Dialog(onDismissRequest = onDismiss) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .shadow(20.dp, RoundedCornerShape(24.dp))
+                .clip(RoundedCornerShape(24.dp))
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(CreamLight, CreamDark)
+                    )
+                )
+                .padding(20.dp)
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Title display
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(DisplayDark)
+                        .border(2.dp, Color(0xFF1A1A1A), RoundedCornerShape(12.dp))
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "HOW TO PLAY",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF81D4FA),
+                        letterSpacing = 3.sp
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Instructions
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color(0xFFE0D8CC))
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    RetroInstructionItem("1", "Move nose left/right to control paddle")
+                    RetroInstructionItem("2", "Open mouth to launch the ball")
+                    RetroInstructionItem("3", "Break all bricks to advance")
+                    RetroInstructionItem("4", "Catch power-ups for abilities!")
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Power-ups section
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(DisplayDark)
+                        .padding(12.dp)
+                ) {
+                    Column {
+                        Text(
+                            text = "POWER-UPS",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF888888),
+                            letterSpacing = 2.sp
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        RetroPowerUpItem(Color(0xFF2196F3), "Wide Paddle")
+                        RetroPowerUpItem(Color(0xFF4CAF50), "Slow Ball")
+                        RetroPowerUpItem(Color(0xFFF44336), "Extra Life")
+                        RetroPowerUpItem(Color(0xFFFFAB00), "Big Ball")
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Tip
+                Text(
+                    text = "Tip: Fewer lives = more power-up drops!",
+                    fontSize = 11.sp,
+                    color = TextMuted,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Close button
+                Button(
+                    onClick = onDismiss,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = AccentOrange),
+                    shape = RoundedCornerShape(24.dp)
+                ) {
+                    Text(
+                        text = "GOT IT!",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun RetroInstructionItem(number: String, text: String) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(24.dp)
+                .clip(CircleShape)
+                .background(AccentOrange),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = number,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White
+            )
         }
         Spacer(modifier = Modifier.width(12.dp))
         Text(
             text = text,
-            fontSize = 14.sp,
-            color = Color.White,
-            modifier = Modifier.weight(1f)
+            fontSize = 13.sp,
+            color = TextDark
         )
     }
 }
 
 @Composable
-private fun PowerUpItem(color: Color, name: String, description: String) {
+fun RetroPowerUpItem(color: Color, name: String) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Surface(
-            modifier = Modifier.size(16.dp),
-            shape = RoundedCornerShape(4.dp),
-            color = color
-        ) {}
-        Spacer(modifier = Modifier.width(12.dp))
-        Column {
-            Text(
-                text = name,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
-                color = color
-            )
-            Text(
-                text = description,
-                fontSize = 12.sp,
-                color = Color.Gray
-            )
-        }
+        Box(
+            modifier = Modifier
+                .size(12.dp)
+                .clip(RoundedCornerShape(3.dp))
+                .background(color)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = name,
+            fontSize = 12.sp,
+            color = Color(0xFFCCCCCC)
+        )
     }
 }
