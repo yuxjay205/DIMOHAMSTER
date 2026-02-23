@@ -34,6 +34,11 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.example.dimohamster.audio.BackgroundMusicManager
 import com.example.dimohamster.ui.theme.SUPERBALLTheme
+import com.example.dimohamster.ui.theme.pixelifySans
+import com.example.dimohamster.ui.theme.pressStart2P
+import com.example.dimohamster.ui.theme.blueBackground
+import com.example.dimohamster.ui.theme.btnColour
+import com.example.dimohamster.ui.theme.BouncingRetroButton
 
 // Retro color palette
 private val CreamBackground = Color(0xFFF5F0E8)
@@ -113,7 +118,7 @@ fun PlayerNameScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(CreamBackground),
+            .background(blueBackground),
         contentAlignment = Alignment.Center
     ) {
         // Main card container
@@ -131,6 +136,11 @@ fun PlayerNameScreen(
                     Brush.verticalGradient(
                         colors = listOf(CreamLight, CreamDark)
                     )
+                )
+                .border(
+                    width = 5.dp,
+                    color = Color.Gray,
+                    shape = RoundedCornerShape(10.dp)
                 )
                 .padding(24.dp)
         ) {
@@ -161,19 +171,20 @@ fun PlayerNameScreen(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         // Small label
-                        Text(
-                            text = "PLAYER ID",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF666666),
-                            letterSpacing = 2.sp
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
+//                        Text(
+//                            text = "PLAYER ID",
+//                            fontSize = 10.sp,
+//                            fontWeight = FontWeight.Bold,
+//                            color = Color(0xFF666666),
+//                            letterSpacing = 2.sp
+//                        )
+//                        Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = "ENTER NAME",
-                            fontSize = 24.sp,
+                            fontSize = 22.sp,
+                            fontFamily = pressStart2P,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFFCCCCCC),
+                            color = Color(0xFFFFCC00),
                             letterSpacing = 3.sp
                         )
                     }
@@ -203,6 +214,7 @@ fun PlayerNameScreen(
                         },
                         modifier = Modifier.fillMaxWidth(),
                         textStyle = LocalTextStyle.current.copy(
+                            fontFamily = pixelifySans,
                             fontSize = 22.sp,
                             fontWeight = FontWeight.Bold,
                             textAlign = TextAlign.Center,
@@ -211,6 +223,7 @@ fun PlayerNameScreen(
                         placeholder = {
                             Text(
                                 text = "Your name",
+                                fontFamily = pixelifySans,
                                 fontSize = 22.sp,
                                 color = TextMuted,
                                 textAlign = TextAlign.Center,
@@ -243,6 +256,7 @@ fun PlayerNameScreen(
                 // Character counter
                 Text(
                     text = "${playerName.length}/12",
+                    fontFamily = pixelifySans,
                     fontSize = 12.sp,
                     color = TextMuted
                 )
@@ -268,41 +282,19 @@ fun PlayerNameScreen(
 
                     Spacer(modifier = Modifier.width(24.dp))
 
-                    // Main orange start button
-                    Button(
+                    // Main start button
+                    BouncingRetroButton(
+                        text = "START",
                         onClick = {
                             if (playerName.isNotBlank()) {
                                 onStartGame(playerName.trim())
                             }
                         },
-                        modifier = Modifier
-                            .height(56.dp)
-                            .width(180.dp)
-                            .shadow(
-                                elevation = 8.dp,
-                                shape = RoundedCornerShape(28.dp),
-                                ambientColor = AccentOrange.copy(alpha = 0.3f),
-                                spotColor = AccentOrange.copy(alpha = 0.3f)
-                            ),
+                        modifier = Modifier.width(180.dp),
                         enabled = playerName.isNotBlank(),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = AccentOrange,
-                            disabledContainerColor = Color(0xFFBBAAAA)
-                        ),
-                        shape = RoundedCornerShape(28.dp),
-                        elevation = ButtonDefaults.buttonElevation(
-                            defaultElevation = 6.dp,
-                            pressedElevation = 2.dp
-                        )
-                    ) {
-                        Text(
-                            text = "START",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White,
-                            letterSpacing = 3.sp
-                        )
-                    }
+                        containerColor = btnColour,
+                        fontSize = 18.sp
+                    )
 
                     Spacer(modifier = Modifier.width(24.dp))
 
@@ -346,6 +338,7 @@ fun PlayerNameScreen(
                 ) {
                     Text(
                         text = "Your name appears on the leaderboard",
+                        fontFamily = pixelifySans,
                         fontSize = 12.sp,
                         color = TextMuted,
                         textAlign = TextAlign.Center
@@ -355,3 +348,5 @@ fun PlayerNameScreen(
         }
     }
 }
+
+

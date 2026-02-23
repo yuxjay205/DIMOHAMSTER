@@ -6,25 +6,55 @@ import android.view.View
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ElevatedButton
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -34,6 +64,11 @@ import androidx.core.view.WindowInsetsControllerCompat
 import com.example.dimohamster.audio.BackgroundMusicManager
 import com.example.dimohamster.database.HighScoreDatabase
 import com.example.dimohamster.ui.theme.SUPERBALLTheme
+import com.example.dimohamster.ui.theme.pixelifySans
+import com.example.dimohamster.ui.theme.pressStart2P
+import com.example.dimohamster.ui.theme.blueBackground
+import com.example.dimohamster.ui.theme.btnColour
+import com.example.dimohamster.ui.theme.BouncingRetroButton
 
 // Retro color palette
 private val CreamBackground = Color(0xFFF5F0E8)
@@ -109,7 +144,7 @@ fun MainMenuScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(CreamBackground),
+            .background(blueBackground),
         contentAlignment = Alignment.Center
     ) {
         // Main card container
@@ -127,6 +162,11 @@ fun MainMenuScreen(
                     Brush.verticalGradient(
                         colors = listOf(CreamLight, CreamDark)
                     )
+                )
+                .border(
+                    width = 5.dp,
+                    color = Color.Gray,
+                    shape = RoundedCornerShape(10.dp)
                 )
                 .padding(24.dp)
         ) {
@@ -151,36 +191,38 @@ fun MainMenuScreen(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         // Small label
-                        Text(
-                            text = "NOSE CONTROL",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF666666),
-                            letterSpacing = 2.sp
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
+//                        Text(
+//                            text = "NOSE CONTROL",
+//                            fontSize = 10.sp,
+//                            fontWeight = FontWeight.Bold,
+//                            color = Color(0xFF666666),
+//                            letterSpacing = 2.sp
+//                        )
+//                        Spacer(modifier = Modifier.height(8.dp))
                         // Main title
-                        Text(
-                            text = "SUPERBALL",
-                            fontSize = 36.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFFEEEEEE),
-                            letterSpacing = 6.sp
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
+//                        Text(
+//                            text = "SUPERBALL",
+//                            fontSize = 36.sp,
+//                            fontWeight = FontWeight.Bold,
+//                            color = Color(0xFFEEEEEE),
+//                            letterSpacing = 6.sp
+//                        )
+                        Image(painter = painterResource(id = R.drawable.superball_logo),
+                            contentDescription = null)
+//                        Spacer(modifier = Modifier.height(4.dp))
                         // Decorative line
-                        Box(
-                            modifier = Modifier
-                                .width(140.dp)
-                                .height(2.dp)
-                                .background(AccentOrange)
-                        )
+//                        Box(
+//                            modifier = Modifier
+//                                .width(140.dp)
+//                                .height(2.dp)
+//                                .background(AccentOrange)
+//                        )
                     }
                 }
 
                 Spacer(modifier = Modifier.height(32.dp))
 
-                // Play button (main orange button)
+                // Play button
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Center,
@@ -197,34 +239,13 @@ fun MainMenuScreen(
 
                     Spacer(modifier = Modifier.width(20.dp))
 
-                    Button(
+                    BouncingRetroButton(
+                        text = "PLAY",
                         onClick = onPlayClicked,
-                        modifier = Modifier
-                            .height(64.dp)
-                            .width(200.dp)
-                            .shadow(
-                                elevation = 10.dp,
-                                shape = RoundedCornerShape(32.dp),
-                                ambientColor = AccentOrange.copy(alpha = 0.4f),
-                                spotColor = AccentOrange.copy(alpha = 0.4f)
-                            ),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = AccentOrange
-                        ),
-                        shape = RoundedCornerShape(32.dp),
-                        elevation = ButtonDefaults.buttonElevation(
-                            defaultElevation = 8.dp,
-                            pressedElevation = 2.dp
-                        )
-                    ) {
-                        Text(
-                            text = "PLAY",
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White,
-                            letterSpacing = 4.sp
-                        )
-                    }
+                        modifier = Modifier.width(200.dp),
+                        containerColor = btnColour,
+                        fontSize = 30.sp
+                    )
 
                     Spacer(modifier = Modifier.width(20.dp))
 
@@ -255,17 +276,21 @@ fun MainMenuScreen(
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     // Leaderboard button
-                    RetroButton(
+                    BouncingRetroButton(
                         text = "SCORES",
                         onClick = { showLeaderboard = true },
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        containerColor = btnColour,
+                        fontSize = 30.sp
                     )
 
                     // How to Play button
-                    RetroButton(
+                    BouncingRetroButton(
                         text = "HOW TO",
                         onClick = { showHowToPlay = true },
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        containerColor = btnColour,
+                        fontSize = 30.sp
                     )
                 }
 
@@ -349,6 +374,7 @@ fun RetroButton(
     ) {
         Text(
             text = text,
+            fontFamily = pixelifySans,
             fontSize = 14.sp,
             fontWeight = FontWeight.Bold,
             color = TextDark,
@@ -375,6 +401,11 @@ fun RetroLeaderboardDialog(onDismiss: () -> Unit) {
                         colors = listOf(CreamLight, CreamDark)
                     )
                 )
+                .border(
+                    width = 5.dp,
+                    color = Color.Gray,
+                    shape = RoundedCornerShape(10.dp)
+                )
                 .padding(20.dp)
         ) {
             Column(
@@ -392,10 +423,11 @@ fun RetroLeaderboardDialog(onDismiss: () -> Unit) {
                 ) {
                     Text(
                         text = "LEADERBOARD",
-                        fontSize = 20.sp,
+                        fontFamily = pressStart2P,
+                        fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFFFFCC00),
-                        letterSpacing = 3.sp
+                        letterSpacing = 1.sp
                     )
                 }
 
@@ -440,24 +472,16 @@ fun RetroLeaderboardDialog(onDismiss: () -> Unit) {
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
                 // Close button
-                Button(
+                BouncingRetroButton(
+                    text = "CLOSE",
                     onClick = onDismiss,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = AccentOrange),
-                    shape = RoundedCornerShape(24.dp)
-                ) {
-                    Text(
-                        text = "CLOSE",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                }
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp), // Padding for the protrusion
+                    containerColor = btnColour,
+                    fontSize = 18.sp
+                )
             }
         }
     }
@@ -495,11 +519,16 @@ fun RetroScoreEntry(
                     modifier = Modifier
                         .size(28.dp)
                         .clip(CircleShape)
-                        .background(if (rank <= 3) rankColor.copy(alpha = 0.2f) else Color(0xFFE0D8CC)),
+                        .background(
+                            if (rank <= 3) rankColor.copy(alpha = 0.2f) else Color(
+                                0xFFE0D8CC
+                            )
+                        ),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = "$rank",
+                        fontFamily = pixelifySans,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         color = if (rank <= 3) rankColor else TextDark
@@ -509,12 +538,14 @@ fun RetroScoreEntry(
                 Column {
                     Text(
                         text = playerName,
+                        fontFamily = pixelifySans,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         color = TextDark
                     )
                     Text(
                         text = "Level $level",
+                        fontFamily = pixelifySans,
                         fontSize = 11.sp,
                         color = TextMuted
                     )
@@ -560,10 +591,11 @@ fun RetroHowToPlayDialog(onDismiss: () -> Unit) {
                 ) {
                     Text(
                         text = "HOW TO PLAY",
-                        fontSize = 20.sp,
+                        fontFamily = pressStart2P,
+                        fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF81D4FA),
-                        letterSpacing = 3.sp
+                        color = Color(0xFFFFCC00),
+                        letterSpacing = 1.sp
                     )
                 }
 
@@ -616,28 +648,21 @@ fun RetroHowToPlayDialog(onDismiss: () -> Unit) {
                 Text(
                     text = "Tip: Fewer lives = more power-up drops!",
                     fontSize = 11.sp,
+                    fontFamily = pixelifySans,
                     color = TextMuted,
                     textAlign = TextAlign.Center
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
                 // Close button
-                Button(
+                BouncingRetroButton(
+                    text = "GOT IT!",
                     onClick = onDismiss,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = AccentOrange),
-                    shape = RoundedCornerShape(24.dp)
-                ) {
-                    Text(
-                        text = "GOT IT!",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                }
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp), // Padding for the protrusion
+                    containerColor = btnColour,
+                    fontSize = 18.sp
+                )
             }
         }
     }
@@ -657,6 +682,7 @@ fun RetroInstructionItem(number: String, text: String) {
         ) {
             Text(
                 text = number,
+                fontFamily = pixelifySans,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.White
@@ -665,6 +691,7 @@ fun RetroInstructionItem(number: String, text: String) {
         Spacer(modifier = Modifier.width(12.dp))
         Text(
             text = text,
+            fontFamily = pixelifySans,
             fontSize = 13.sp,
             color = TextDark
         )
@@ -686,6 +713,7 @@ fun RetroPowerUpItem(color: Color, name: String) {
         Spacer(modifier = Modifier.width(8.dp))
         Text(
             text = name,
+            fontFamily = pixelifySans,
             fontSize = 12.sp,
             color = Color(0xFFCCCCCC)
         )

@@ -128,6 +128,8 @@ dependencies {
 
     // Google Play Services - Location
     implementation("com.google.android.gms:play-services-location:21.1.0")
+    implementation(libs.androidx.compose.ui.unit)
+    implementation(libs.androidx.compose.animation.core)
 
     // CameraX for camera functionality
     val cameraxVersion = "1.3.1"

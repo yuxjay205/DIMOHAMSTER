@@ -435,12 +435,12 @@ class MainActivity : AppCompatActivity(), GameView.OnTouchInputListener {
             permissionsToRequest.add(Manifest.permission.ACCESS_COARSE_LOCATION)
         }
 
-        if (permissionsToRequest.isNotEmpty()) {
-            locationPermissionLauncher.launch(permissionsToRequest.toTypedArray())
-        } else {
-            // Permissions already granted
-            locationSvc.startTracking()
-        }
+//        if (permissionsToRequest.isNotEmpty()) {
+//            locationPermissionLauncher.launch(permissionsToRequest.toTypedArray())
+//        } else {
+//            // Permissions already granted
+//            locationSvc.startTracking()
+//        }
     }
 
     override fun onResume() {

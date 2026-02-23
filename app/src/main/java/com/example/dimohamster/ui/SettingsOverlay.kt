@@ -23,6 +23,10 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.example.dimohamster.core.NativeRenderer
 import com.example.dimohamster.database.HighScoreDatabase
+import com.example.dimohamster.ui.theme.pixelifySans
+import com.example.dimohamster.ui.theme.pressStart2P
+import com.example.dimohamster.ui.theme.BouncingRetroButton
+import com.example.dimohamster.ui.theme.btnColour
 
 // Retro color palette
 private val CreamBackground = Color(0xFFF5F0E8)
@@ -71,6 +75,11 @@ fun SettingsOverlay(
                         colors = listOf(CreamLight, CreamDark)
                     )
                 )
+                .border(
+                    width = 5.dp,
+                    color = Color.Gray,
+                    shape = RoundedCornerShape(10.dp)
+                )
                 .padding(20.dp)
         ) {
             Column(
@@ -88,10 +97,11 @@ fun SettingsOverlay(
                 ) {
                     Text(
                         text = "SETTINGS",
-                        fontSize = 22.sp,
+                        fontFamily = pressStart2P,
+                        fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFFEEEEEE),
-                        letterSpacing = 3.sp
+                        letterSpacing = 1.sp
                     )
                 }
 
@@ -147,74 +157,38 @@ fun SettingsOverlay(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Leaderboard button
-                Button(
+                BouncingRetroButton(
+                    text = "LEADERBOARD",
                     onClick = { showLeaderboard = true },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFFFB300)
-                    ),
-                    shape = RoundedCornerShape(24.dp)
-                ) {
-                    Text(
-                        text = "LEADERBOARD",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TextDark,
-                        letterSpacing = 2.sp
-                    )
-                }
+                    modifier = Modifier.fillMaxWidth(),
+                    containerColor = btnColour,
+                    fontSize = 16.sp
+                )
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
                 // Resume button
-                Button(
+                BouncingRetroButton(
+                    text = "RESUME",
                     onClick = onDismiss,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(52.dp)
-                        .shadow(6.dp, RoundedCornerShape(26.dp)),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = AccentGreen
-                    ),
-                    shape = RoundedCornerShape(26.dp)
-                ) {
-                    Text(
-                        text = "RESUME",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White,
-                        letterSpacing = 2.sp
-                    )
-                }
+                    modifier = Modifier.fillMaxWidth(),
+                    containerColor = btnColour,
+                    fontSize = 18.sp
+                )
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
                 // Main menu button
-                OutlinedButton(
+                BouncingRetroButton(
+                    text = "MAIN MENU",
                     onClick = {
                         NativeRenderer.setPaused(false)
                         onBackToMainMenu()
                     },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp),
-                    shape = RoundedCornerShape(24.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = AccentRed
-                    ),
-                    border = ButtonDefaults.outlinedButtonBorder.copy(
-                        brush = Brush.horizontalGradient(listOf(AccentRed, AccentRed))
-                    )
-                ) {
-                    Text(
-                        text = "MAIN MENU",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 2.sp
-                    )
-                }
+                    modifier = Modifier.fillMaxWidth(),
+                    containerColor = btnColour,
+                    fontSize = 16.sp
+                )
             }
         }
     }
@@ -241,6 +215,7 @@ fun RetroSettingSlider(
         ) {
             Text(
                 text = label,
+                fontFamily = pixelifySans,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
                 color = TextDark
@@ -253,6 +228,7 @@ fun RetroSettingSlider(
             ) {
                 Text(
                     text = valueText,
+                    fontFamily = pixelifySans,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFFCCCCCC)
@@ -287,6 +263,7 @@ fun RetroSettingToggle(
     ) {
         Text(
             text = label,
+            fontFamily = pixelifySans,
             fontSize = 14.sp,
             fontWeight = FontWeight.Bold,
             color = TextDark
@@ -339,10 +316,11 @@ fun LeaderboardDialog(onDismiss: () -> Unit) {
                 ) {
                     Text(
                         text = "LEADERBOARD",
-                        fontSize = 20.sp,
+                        fontFamily = pressStart2P,
+                        fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFFFFCC00),
-                        letterSpacing = 3.sp
+                        letterSpacing = 1.sp
                     )
                 }
 
@@ -361,6 +339,7 @@ fun LeaderboardDialog(onDismiss: () -> Unit) {
                     ) {
                         Text(
                             text = "No scores yet!\nPlay a game to set a record",
+                            fontFamily = pixelifySans,
                             fontSize = 14.sp,
                             color = TextMuted,
                             textAlign = TextAlign.Center
@@ -390,21 +369,13 @@ fun LeaderboardDialog(onDismiss: () -> Unit) {
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Close button
-                Button(
+                BouncingRetroButton(
+                    text = "CLOSE",
                     onClick = onDismiss,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = AccentOrange),
-                    shape = RoundedCornerShape(24.dp)
-                ) {
-                    Text(
-                        text = "CLOSE",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                }
+                    modifier = Modifier.fillMaxWidth(),
+                    containerColor = btnColour,
+                    fontSize = 18.sp
+                )
             }
         }
     }
@@ -446,6 +417,7 @@ fun LeaderboardEntry(
                 ) {
                     Text(
                         text = "$rank",
+                        fontFamily = pixelifySans,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         color = if (rank <= 3) rankColor else TextDark
@@ -455,12 +427,14 @@ fun LeaderboardEntry(
                 Column {
                     Text(
                         text = playerName,
+                        fontFamily = pixelifySans,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         color = TextDark
                     )
                     Text(
                         text = "Level $level",
+                        fontFamily = pixelifySans,
                         fontSize = 11.sp,
                         color = TextMuted
                     )
@@ -468,6 +442,7 @@ fun LeaderboardEntry(
             }
             Text(
                 text = "$score",
+                fontFamily = pixelifySans,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 color = AccentOrange
