@@ -253,11 +253,13 @@ This project is created for educational purposes as part of CSD3156 Mobile and C
 
 ## 👥 Team
 
-**Team ID:** [Your Team ID]
+**Team ID:** [Group 21]
 **Members:**
-- [Your Name] - [SIT ID]
-- [Team Member 2] - [SIT ID]
-- [Team Member 3] - [SIT ID]
+- [Lee Yong Yee] - [2301369]
+- [Crystal Koh Qiao Wei] - [2301349]
+- [Yang YuJie] - [2301383]
+- [Liu YaoTing] - [2301427]
+- [Ian Loi] - [2301393]
 
 ---
 
