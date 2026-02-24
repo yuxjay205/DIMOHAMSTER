@@ -31,6 +31,7 @@ import com.example.dimohamster.sensors.SensorBridge
 import com.example.dimohamster.simulation.DeviceSimulator
 import android.content.Intent
 import com.example.dimohamster.audio.BackgroundMusicManager
+import com.example.dimohamster.audio.SoundEffectManager
 import com.example.dimohamster.ui.SettingsOverlay
 import com.example.dimohamster.database.HighScoreDatabase
 import com.example.dimohamster.core.GameEventListener
@@ -162,10 +163,35 @@ class MainActivity : AppCompatActivity(), GameView.OnTouchInputListener {
             }
         }
 
+        // Setup bounce sound listener
+        GameEventListener.setOnBounceSoundListener {
+            SoundEffectManager.playBounceSound()
+        }
+
+        // Setup level complete sound listener
+        GameEventListener.setOnLevelCompleteListener {
+            BackgroundMusicManager.mute()
+            SoundEffectManager.playWinSound()
+        }
+
+        // Setup game over sound listener
+        GameEventListener.setOnGameOverSoundListener {
+            BackgroundMusicManager.mute()
+            SoundEffectManager.playLoseSound()
+        }
+
+        // Setup game resume listener (unmute BGM when game restarts or next level)
+        GameEventListener.setOnGameResumeListener {
+            BackgroundMusicManager.unmute()
+        }
+
         cameraService.setPreviewView(cameraPreviewView)
 
         // Start background music (in case coming from external launch)
         BackgroundMusicManager.start(this)
+
+        // Initialize sound effects
+        SoundEffectManager.init(this)
 
         // Request permissions
         requestPermissions()
@@ -238,6 +264,7 @@ class MainActivity : AppCompatActivity(), GameView.OnTouchInputListener {
 
             override fun onMouthOpened() {
                 NativeRenderer.onMouthOpened()
+                SoundEffectManager.playShootingSound()
             }
 
             override fun onPhotoCaptured(bitmap: Bitmap?) {
@@ -490,6 +517,7 @@ class MainActivity : AppCompatActivity(), GameView.OnTouchInputListener {
         locationSvc.shutdown()
         cameraService.shutdown()
         deviceSimulator.shutdown()
+        SoundEffectManager.release()
 
         Log.i(TAG, "MainActivity destroyed")
     }

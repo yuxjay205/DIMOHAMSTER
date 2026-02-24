@@ -2,6 +2,7 @@ package com.example.dimohamster.ui.theme
 
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -12,6 +13,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.Font
@@ -21,6 +23,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.dimohamster.R
+import com.example.dimohamster.audio.SoundEffectManager
 
 // Custom font
 val pixelifySans = FontFamily(
@@ -50,13 +53,36 @@ fun BouncingRetroButton(
 
     // The amount the button physically "sinks" when pressed
     val verticalPressOffset by animateDpAsState(
-        targetValue = if (isPressed && enabled) 6.dp else 0.dp,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy),
+        targetValue = if (isPressed && enabled) 8.dp else 0.dp,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessHigh
+        ),
         label = "press_depth"
+    )
+
+    // Scale effect when pressed
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed && enabled) 0.96f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessHigh
+        ),
+        label = "press_scale"
     )
 
     // Current color based on enabled state
     val currentContainerColor = if (enabled) containerColor else Color(0xFFBBAAAA)
+
+    // Pressed color is slightly darker
+    val pressedColor = remember(currentContainerColor) {
+        Color(
+            red = (currentContainerColor.red * 0.85f),
+            green = (currentContainerColor.green * 0.85f),
+            blue = (currentContainerColor.blue * 0.85f),
+            alpha = currentContainerColor.alpha
+        )
+    }
 
     // A darker shade for the "side" of the button to give it depth
     val sideColor = remember(currentContainerColor) {
@@ -69,13 +95,18 @@ fun BouncingRetroButton(
         )
     }
 
+    // Use the pressed color when button is pressed
+    val displayColor = if (isPressed && enabled) pressedColor else currentContainerColor
+
     Box(
         modifier = modifier
+            .scale(scale)
             .pointerInput(enabled) {
                 if (enabled) {
                     detectTapGestures(
                         onPress = {
                             isPressed = true
+                            SoundEffectManager.playButtonClickSound()
                             try {
                                 awaitRelease()
                             } finally {
@@ -105,8 +136,8 @@ fun BouncingRetroButton(
                 .fillMaxWidth()
                 .height(64.dp)
                 .offset(y = verticalPressOffset)
-                .background(currentContainerColor, RoundedCornerShape(16.dp))
-                .border(2.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(16.dp)),
+                .background(displayColor, RoundedCornerShape(16.dp))
+                .border(2.dp, Color.White.copy(alpha = if (isPressed) 0.1f else 0.3f), RoundedCornerShape(16.dp)),
             contentAlignment = Alignment.Center
         ) {
             Text(

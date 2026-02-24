@@ -15,6 +15,8 @@ object BackgroundMusicManager {
     private var mediaPlayer: MediaPlayer? = null
     private var isPrepared = false
     private var currentVolume = 0.5f  // Default 50% volume
+    private var isMuted = false
+    private var volumeBeforeMute = 0.5f
 
     /**
      * Initialize and start playing background music.
@@ -93,6 +95,43 @@ object BackgroundMusicManager {
      * Get the current volume level.
      */
     fun getVolume(): Float = currentVolume
+
+    /**
+     * Mute the background music (saves current volume for unmuting).
+     */
+    fun mute() {
+        if (!isMuted) {
+            volumeBeforeMute = currentVolume
+            isMuted = true
+            try {
+                mediaPlayer?.setVolume(0f, 0f)
+                Log.i(TAG, "Background music muted")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error muting background music: ${e.message}")
+            }
+        }
+    }
+
+    /**
+     * Unmute the background music (restores previous volume).
+     */
+    fun unmute() {
+        if (isMuted) {
+            isMuted = false
+            try {
+                mediaPlayer?.setVolume(volumeBeforeMute, volumeBeforeMute)
+                currentVolume = volumeBeforeMute
+                Log.i(TAG, "Background music unmuted to volume: $currentVolume")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error unmuting background music: ${e.message}")
+            }
+        }
+    }
+
+    /**
+     * Check if music is currently muted.
+     */
+    fun isMuted(): Boolean = isMuted
 
     /**
      * Check if music is currently playing.

@@ -33,6 +33,7 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.example.dimohamster.audio.BackgroundMusicManager
+import com.example.dimohamster.audio.SoundEffectManager
 import com.example.dimohamster.ui.theme.SUPERBALLTheme
 import com.example.dimohamster.ui.theme.pixelifySans
 import com.example.dimohamster.ui.theme.pressStart2P
@@ -58,6 +59,9 @@ class PlayerNameActivity : ComponentActivity() {
 
         setupFullscreen()
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+
+        // Initialize sound effects (if not already initialized)
+        SoundEffectManager.init(this)
 
         val prefs = getSharedPreferences("game_prefs", MODE_PRIVATE)
         val savedName = prefs.getString("player_name", "") ?: ""

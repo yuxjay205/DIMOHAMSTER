@@ -62,6 +62,7 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.example.dimohamster.audio.BackgroundMusicManager
+import com.example.dimohamster.audio.SoundEffectManager
 import com.example.dimohamster.database.HighScoreDatabase
 import com.example.dimohamster.ui.theme.SUPERBALLTheme
 import com.example.dimohamster.ui.theme.pixelifySans
@@ -90,6 +91,7 @@ class MainMenuActivity : ComponentActivity() {
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
         BackgroundMusicManager.start(this)
+        SoundEffectManager.init(this)
 
         setContent {
             SUPERBALLTheme {

@@ -123,6 +123,130 @@ void navigateToMainMenu() {
     }
 }
 
+// Helper function to play bounce sound
+void triggerBounceSound() {
+    if (!g_javaVM) {
+        return;
+    }
+
+    JNIEnv* env = nullptr;
+    bool needsDetach = false;
+
+    int getEnvResult = g_javaVM->GetEnv((void**)&env, JNI_VERSION_1_6);
+    if (getEnvResult == JNI_EDETACHED) {
+        if (g_javaVM->AttachCurrentThread(&env, nullptr) != 0) {
+            return;
+        }
+        needsDetach = true;
+    }
+
+    jclass listenerClass = env->FindClass("com/example/dimohamster/core/GameEventListener");
+    if (listenerClass) {
+        jmethodID methodID = env->GetStaticMethodID(listenerClass, "onBounceSound", "()V");
+        if (methodID) {
+            env->CallStaticVoidMethod(listenerClass, methodID);
+        }
+        env->DeleteLocalRef(listenerClass);
+    }
+
+    if (needsDetach) {
+        g_javaVM->DetachCurrentThread();
+    }
+}
+
+// Helper function to play level complete sound
+void triggerLevelCompleteSound() {
+    if (!g_javaVM) {
+        return;
+    }
+
+    JNIEnv* env = nullptr;
+    bool needsDetach = false;
+
+    int getEnvResult = g_javaVM->GetEnv((void**)&env, JNI_VERSION_1_6);
+    if (getEnvResult == JNI_EDETACHED) {
+        if (g_javaVM->AttachCurrentThread(&env, nullptr) != 0) {
+            return;
+        }
+        needsDetach = true;
+    }
+
+    jclass listenerClass = env->FindClass("com/example/dimohamster/core/GameEventListener");
+    if (listenerClass) {
+        jmethodID methodID = env->GetStaticMethodID(listenerClass, "onLevelComplete", "()V");
+        if (methodID) {
+            env->CallStaticVoidMethod(listenerClass, methodID);
+        }
+        env->DeleteLocalRef(listenerClass);
+    }
+
+    if (needsDetach) {
+        g_javaVM->DetachCurrentThread();
+    }
+}
+
+// Helper function to play game over sound
+void triggerGameOverSound() {
+    if (!g_javaVM) {
+        return;
+    }
+
+    JNIEnv* env = nullptr;
+    bool needsDetach = false;
+
+    int getEnvResult = g_javaVM->GetEnv((void**)&env, JNI_VERSION_1_6);
+    if (getEnvResult == JNI_EDETACHED) {
+        if (g_javaVM->AttachCurrentThread(&env, nullptr) != 0) {
+            return;
+        }
+        needsDetach = true;
+    }
+
+    jclass listenerClass = env->FindClass("com/example/dimohamster/core/GameEventListener");
+    if (listenerClass) {
+        jmethodID methodID = env->GetStaticMethodID(listenerClass, "onGameOverSound", "()V");
+        if (methodID) {
+            env->CallStaticVoidMethod(listenerClass, methodID);
+        }
+        env->DeleteLocalRef(listenerClass);
+    }
+
+    if (needsDetach) {
+        g_javaVM->DetachCurrentThread();
+    }
+}
+
+// Helper function to notify game resume (for unmuting BGM)
+void triggerGameResume() {
+    if (!g_javaVM) {
+        return;
+    }
+
+    JNIEnv* env = nullptr;
+    bool needsDetach = false;
+
+    int getEnvResult = g_javaVM->GetEnv((void**)&env, JNI_VERSION_1_6);
+    if (getEnvResult == JNI_EDETACHED) {
+        if (g_javaVM->AttachCurrentThread(&env, nullptr) != 0) {
+            return;
+        }
+        needsDetach = true;
+    }
+
+    jclass listenerClass = env->FindClass("com/example/dimohamster/core/GameEventListener");
+    if (listenerClass) {
+        jmethodID methodID = env->GetStaticMethodID(listenerClass, "onGameResume", "()V");
+        if (methodID) {
+            env->CallStaticVoidMethod(listenerClass, methodID);
+        }
+        env->DeleteLocalRef(listenerClass);
+    }
+
+    if (needsDetach) {
+        g_javaVM->DetachCurrentThread();
+    }
+}
+
 extern "C" {
 
 // =============================================================================
@@ -679,5 +803,21 @@ namespace Game {
 
     void goToMainMenu() {
         navigateToMainMenu();
+    }
+
+    void playBounceSound() {
+        triggerBounceSound();
+    }
+
+    void playLevelCompleteSound() {
+        triggerLevelCompleteSound();
+    }
+
+    void playGameOverSound() {
+        triggerGameOverSound();
+    }
+
+    void onGameResume() {
+        triggerGameResume();
     }
 }

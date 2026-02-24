@@ -12,6 +12,10 @@ namespace Game {
     extern void reportGameOver(int score, int level);
     extern void vibrate(int durationMs);
     extern void goToMainMenu();
+    extern void playBounceSound();
+    extern void playLevelCompleteSound();
+    extern void playGameOverSound();
+    extern void onGameResume();
 }
 
 namespace Game {
@@ -140,6 +144,7 @@ void BreakoutGame::nextLevel() {
     }
 
     resetLevel();
+    onGameResume();  // Unmute BGM
     LOGI("Advanced to level %d (ball speed: %.0f)", m_level, m_ballSpeed);
 }
 
@@ -152,6 +157,9 @@ void BreakoutGame::loseLife() {
             m_highScore = m_score;
         }
         LOGI("Game Over! Final Score: %d", m_score);
+
+        // Play game over sound
+        playGameOverSound();
 
         // Report game over to save high score
         reportGameOver(m_score, m_level);
@@ -274,6 +282,7 @@ void BreakoutGame::update(float dt) {
         if (m_bricksRemaining <= 0) {
             m_state = GameState::LEVEL_COMPLETE;
             m_stateTimer = 0.0f;
+            playLevelCompleteSound();
         }
     }
     else if (m_state == GameState::LEVEL_COMPLETE) {
@@ -307,17 +316,20 @@ void BreakoutGame::updatePhysics(float dt) {
             m_ballPos.x = currentRadius;
             m_ballVel.x = -m_ballVel.x;
             m_screenShake = 5.0f;
+            playBounceSound();
         }
         if (m_ballPos.x + currentRadius > m_screenW) {
             m_ballPos.x = m_screenW - currentRadius;
             m_ballVel.x = -m_ballVel.x;
             m_screenShake = 5.0f;
+            playBounceSound();
         }
         // Top boundary - bounce off bottom of UI bar
         if (m_ballPos.y + currentRadius > gameCeiling) {
             m_ballPos.y = gameCeiling - currentRadius;
             m_ballVel.y = -m_ballVel.y;
             m_screenShake = 5.0f;
+            playBounceSound();
         }
 
         // Bottom - lose life
@@ -355,6 +367,7 @@ void BreakoutGame::checkCollisions() {
         m_ballVel.y = fabs(cos(angle) * speed);
 
         m_screenShake = 8.0f;
+        playBounceSound();
     }
 
     // Brick collisions
@@ -395,6 +408,7 @@ bool BreakoutGame::checkBrickCollision(const Brick& brick) {
             m_ballVel.y = -m_ballVel.y;
         }
 
+        playBounceSound();
         return true;
     }
 
@@ -594,6 +608,7 @@ void BreakoutGame::onTouchDown(float x, float y) {
             m_ballSpeed = 500.0f;
             resetLevel();
             vibrate(30);
+            onGameResume();  // Unmute BGM
             LOGI("Game restarted by button press!");
         }
         // Check if menu button was tapped

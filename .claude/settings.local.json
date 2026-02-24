@@ -16,7 +16,8 @@
       "Bash(./gradlew assembleDebug:*)",
       "Bash(adb logcat:*)",
       "Bash(adb install:*)",
-      "Bash(adb shell:*)"
+      "Bash(adb shell:*)",
+      "Bash(copy \"C:\\\\Users\\\\jayya\\\\Downloads\\\\bgm.wav\" \"C:\\\\Users\\\\jayya\\\\Documents\\\\GitHub\\\\DIMOHAMSTER\\\\app\\\\src\\\\main\\\\res\\\\raw\\\\bgm.wav\")"
     ]
   }
 }
