@@ -1,11 +1,16 @@
 package com.example.dimohamster
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -83,6 +88,20 @@ private val TextDark = Color(0xFF333333)
 private val TextMuted = Color(0xFF888888)
 
 class MainMenuActivity : ComponentActivity() {
+    companion object {
+        private const val TAG = "MainMenuActivity"
+    }
+
+    // Permission launcher for camera
+    private val cameraPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            Log.i(TAG, "Camera permission granted")
+        } else {
+            Log.w(TAG, "Camera permission denied")
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -92,6 +111,9 @@ class MainMenuActivity : ComponentActivity() {
 
         BackgroundMusicManager.start(this)
         SoundEffectManager.init(this)
+
+        // Request camera permission on app open
+        requestCameraPermission()
 
         setContent {
             SUPERBALLTheme {
@@ -114,6 +136,21 @@ class MainMenuActivity : ComponentActivity() {
     override fun onPause() {
         super.onPause()
         BackgroundMusicManager.pause()
+    }
+
+    private fun requestCameraPermission() {
+        when {
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.CAMERA
+            ) == PackageManager.PERMISSION_GRANTED -> {
+                Log.i(TAG, "Camera permission already granted")
+            }
+            else -> {
+                Log.i(TAG, "Requesting camera permission")
+                cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+            }
+        }
     }
 
     private fun setupFullscreen() {
